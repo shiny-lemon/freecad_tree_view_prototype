@@ -65,7 +65,7 @@
 		</div>
 	</main>
 	<footer>
-		<span>FreeCAD Tree View Prototype • <a href="about:blank">Read More on GitHub</a></span>
+		<span>FreeCAD Tree View Prototype • <a href="https://github.com/shiny-lemon/freecad_tree_view_prototype" target="_blank">Read More on GitHub</a></span>
 	</footer>
 </div>
 
