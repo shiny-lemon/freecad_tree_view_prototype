@@ -64,7 +64,7 @@
 		<button class="icon" id="filter-anchor" popovertarget="filter-popover">
 			<ListFilter size={20} />
 		</button>
-		<div class="filter-popup" id="filter-popover" popover="auto">
+		<div class="filter-popup overlay" id="filter-popover" popover="auto">
 			<form action="#">
 				<!-- onchange={({ target }) => (filtered = target?.value)} -->
 				<fieldset>
@@ -139,11 +139,6 @@
 		margin: 8px 0;
 		inset: auto;
 		position-area: block-end span-inline-end;
-
-		border-radius: 4px;
-		border: none;
-		background-color: var(--overlay-2);
-		color: var(--base);
 	}
 
 	.top {

@@ -50,15 +50,12 @@
 		height: 58px;
 		aspect-ratio: 1;
 
-		background-color: var(--surface-0);
 		border-radius: 4px;
 		overflow: hidden;
 
 		display: flex;
 		justify-content: center;
 		align-items: center;
-
-		color: var(--subtext-0);
 
 		anchor-name: var(--anchor-name);
 	}
@@ -75,8 +72,7 @@
 		font-size: 1rem;
 		font-family: inherit;
 
-		background-color: var(--overlay-2);
-		color: var(--base);
+		background-color: var(--surface-0);
 		border: none;
 		border-radius: 4px;
 

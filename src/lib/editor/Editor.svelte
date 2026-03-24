@@ -23,7 +23,7 @@
 	const flyParams = { x: 200, duration: 180 } satisfies FlyParams;
 </script>
 
-<div class="editor" style:position-anchor={positionAnchor} hidden={!active}>
+<div class="editor overlay" style:position-anchor={positionAnchor} hidden={!active}>
 	<div class="tabs">
 		<button class="tab" class:active-tab={activeTab === 'task'} onclick={() => (activeTab = 'task')}
 			>Task</button
@@ -97,9 +97,6 @@
 
 		position: absolute;
 
-		border-radius: 4px;
-		background-color: var(--base);
-
 		inset-inline-start: calc(anchor(end) + 1.25em);
 		inset-block-start: calc(anchor(start) + 1.25em);
 
@@ -142,7 +139,7 @@
 		border: none;
 	}
 	.active-tab {
-		background-color: var(--surface-2);
+		background-color: var(--subtext-0);
 	}
 
 	.top {
