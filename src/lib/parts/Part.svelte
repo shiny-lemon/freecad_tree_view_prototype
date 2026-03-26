@@ -1,16 +1,14 @@
 <script lang="ts">
-	import { Box, ComponentIcon, type Icon as IconType } from '@lucide/svelte';
-	import type { Component } from 'svelte';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	interface Props {
 		name: string;
 		image: string | null;
 		onclick: MouseEventHandler<HTMLButtonElement> | null | undefined;
-		DocumentIcon: typeof IconType;
+		documentIcon: string;
 	}
 
-	const { name, image, onclick, DocumentIcon }: Props = $props();
+	const { name, image, onclick, documentIcon }: Props = $props();
 
 	let namePopover: HTMLDivElement | null = $state(null);
 
@@ -37,7 +35,7 @@
 	{#if image != null}
 		<img class="thumbnail" src={image} alt="" />
 	{:else}
-		<DocumentIcon size="2.25rem" />
+		<img class="thumbnail fallback" src={documentIcon} alt="" />
 	{/if}
 
 	<div id="name-popover" popover="hint" bind:this={namePopover}>
@@ -62,6 +60,11 @@
 
 	.thumbnail {
 		height: 58px;
+		background-color: var(--surface-0);
+	}
+	.thumbnail.fallback {
+		height: 48px;
+		padding: 12px;
 	}
 
 	#name-popover {

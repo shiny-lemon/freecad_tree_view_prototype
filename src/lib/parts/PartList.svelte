@@ -22,10 +22,10 @@
 
 			<ol class="new-part-list">
 				{#each Object.values(documentType) as type}
-					{#await documentIcon(type) then DocumentIcon}
+					{#await documentIcon(type) then src}
 						<li>
 							<button class="part-option">
-								<img src={DocumentIcon} alt="" />
+								<img {src} alt="" />
 								{displayType(type)}
 							</button>
 						</li>
@@ -36,12 +36,14 @@
 	</div>
 
 	{#each items as item}
-		<Part
-			name={item.name}
-			image={item.thumbnail}
-			DocumentIcon={documentIcon(item.type)}
-			onclick={() => (project.selected = item)}
-		/>
+		{#await documentIcon(item.type) then documentIconSrc}
+			<Part
+				name={item.name}
+				image={item.thumbnail}
+				documentIcon={documentIconSrc}
+				onclick={() => (project.selected = item)}
+			/>
+		{/await}
 	{/each}
 </div>
 
