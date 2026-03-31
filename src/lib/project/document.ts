@@ -1,4 +1,5 @@
 import { Box, Drill, House, type Icon, Link, StickyNote, Table2 } from '@lucide/svelte';
+import iconAssembly from "$lib/assets/tools/workbench/assembly.svg"
 import {
 	featureCategory,
 	isDressUpType,
@@ -141,20 +142,20 @@ export const newAssembly = (name: string, parts: Part[], thumbnail?: string): As
 	return document;
 };
 
-export const documentIcon = (type: DocumentType): typeof Icon => {
+export const documentIcon = async (type: DocumentType): Promise<string> => {
 	switch (type) {
 		case documentType.PART:
-			return Box;
+			return (await import("$lib/assets/tools/workbench/partdesign.svg")).default;
 		case documentType.ASSEMBLY:
-			return Link;
+			return (await import("$lib/assets/tools/workbench/assembly.svg")).default
 		case documentType.BIM:
-			return House;
+			return (await import("$lib/assets/tools/workbench/bim.svg")).default
 		case documentType.CAM:
-			return Drill;
+			return (await import("$lib/assets/tools/workbench/cam.svg")).default
 		case documentType.TECH_DRAW:
-			return Table2;
+			return (await import("$lib/assets/tools/workbench/tech-draw.svg")).default
 		case documentType.VAR_SET:
-			return StickyNote;
+			return (await import("$lib/assets/tools/workbench/var-set.svg")).default
 		default:
 			const unhandledType: never = type;
 			throw new Error(`Unhandled type case: ${unhandledType}`);

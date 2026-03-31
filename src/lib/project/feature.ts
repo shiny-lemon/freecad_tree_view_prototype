@@ -67,3 +67,28 @@ export const feature = (type: FeatureType, name: string): Feature => {
 
 	return feature;
 };
+
+export const featureIcon = async (type: FeatureType): Promise<string> => {
+	switch (type) {
+		case featureType.SKETCH:
+			return (await import("$lib/assets/tools/part-design/new-sketch.svg")).default;
+		case featureType.PAD:
+			return (await import("$lib/assets/tools/part-design/pad.svg")).default;
+		case featureType.REVOLVE:
+			return (await import("$lib/assets/tools/part-design/revolution.svg")).default;
+		case featureType.POCKET:
+			return (await import("$lib/assets/tools/part-design/pocket.svg")).default;
+		case featureType.FILLET:
+			return (await import("$lib/assets/tools/part-design/fillet.svg")).default;
+		case featureType.CHAMFER:
+			return (await import("$lib/assets/tools/part-design/chamfer.svg")).default;
+		case featureType.LINEAR:
+			return (await import("$lib/assets/tools/part-design/linear-pattern.svg")).default;
+		case featureType.RADIAL:
+			return (await import("$lib/assets/tools/part-design/linear-pattern.svg")).default;
+
+		default:
+			const unhandledType: never = type;
+			throw new Error(`Unhandled type case: ${unhandledType}`);
+	}
+};

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Box, Drill, House, Link, Plus, StickyNote, Table2 } from '@lucide/svelte';
+	import { Plus } from '@lucide/svelte';
 	import Part from './Part.svelte';
 	import { documentIcon, documentType, displayType, type Document } from '$lib/project/document';
 	import { project } from '$lib/data/data.svelte';
@@ -16,27 +16,34 @@
 		<Plus />
 	</button>
 
-	<div class="add-part" id="add-part-popover" popover="auto">
+	<div class="add-part overlay" id="add-part-popover" popover="auto">
 		<fieldset>
 			<legend>New document</legend>
 
-			{#each Object.values(documentType) as type}
-				{@const DocumentIcon = documentIcon(type)}
-				<button class="part-option">
-					<DocumentIcon />
-					{displayType(type)}
-				</button>
-			{/each}
+			<ol class="new-part-list">
+				{#each Object.values(documentType) as type}
+					{#await documentIcon(type) then src}
+						<li>
+							<button class="part-option">
+								<img {src} alt="" />
+								{displayType(type)}
+							</button>
+						</li>
+					{/await}
+				{/each}
+			</ol>
 		</fieldset>
 	</div>
 
 	{#each items as item}
-		<Part
-			name={item.name}
-			image={item.thumbnail}
-			DocumentIcon={documentIcon(item.type)}
-			onclick={() => (project.selected = item)}
-		/>
+		{#await documentIcon(item.type) then documentIconSrc}
+			<Part
+				name={item.name}
+				image={item.thumbnail}
+				documentIcon={documentIconSrc}
+				onclick={() => (project.selected = item)}
+			/>
+		{/await}
 	{/each}
 </div>
 
@@ -50,32 +57,23 @@
 		margin: 4px;
 		inset: auto;
 		position-area: block-end span-inline-end;
-
-		border-radius: 4px;
-		border: none;
-		background-color: var(--overlay-2);
-		color: var(--base);
-	}
-	#add-part-popover > fieldset {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
 	}
 
 	.part-option {
+		width: 100%;
+
 		display: flex;
 		justify-content: start;
 		align-items: center;
 		gap: 4px;
 		padding: 4px;
-		border-radius: 4px;
 		border: none;
 
-		color: var(--base);
-		background-color: var(--subtext-0);
+		background-color: transparent;
 	}
-	.part-option:hover {
-		background-color: var(--subtext-1);
+
+	.part-option > img {
+		height: 2rem;
 	}
 
 	.part-list {
@@ -89,9 +87,6 @@
 
 		padding: 16px 0;
 
-		border: 0;
-		border-right: 1px;
-		border-style: solid;
-		border-color: var(--surface-0);
+		background-color: var(--background-1);
 	}
 </style>

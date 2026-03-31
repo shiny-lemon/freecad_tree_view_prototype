@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Trash } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { elasticIn } from 'svelte/easing';
-	import { fly, slide, type FlyParams } from 'svelte/transition';
+	import { fly, type FlyParams } from 'svelte/transition';
 	import EditorTable from './EditorTable.svelte';
+	import type { FormEventHandler } from 'svelte/elements';
 
 	interface Props {
 		positionAnchor: string;
@@ -18,22 +18,56 @@
 		}
 	});
 
-	let activeTab: 'task' | 'properties' = $state('properties');
+	const editorTabs = {
+		TASK: 'task-tab',
+		PROPERTIES: 'properties-tab'
+	} as const;
+	type EditorTab = (typeof editorTabs)[keyof typeof editorTabs];
+
+	let activeTab: EditorTab = $state(editorTabs.PROPERTIES);
+	const oninput: FormEventHandler<HTMLElement> = (event) => {
+		console.log(event);
+		activeTab = (event.target as HTMLElement)?.id as EditorTab;
+	};
+	$inspect(activeTab);
 
 	const flyParams = { x: 200, duration: 180 } satisfies FlyParams;
 </script>
 
-<div class="editor" style:position-anchor={positionAnchor} hidden={!active}>
-	<div class="tabs">
-		<button class="tab" class:active-tab={activeTab === 'task'} onclick={() => (activeTab = 'task')}
+<div class="editor overlay" style:position-anchor={positionAnchor} hidden={!active}>
+	<ul class="editor-tabs" {oninput}>
+		<li>
+			<label>
+				<input
+					type="radio"
+					name="editor-tab"
+					id={editorTabs.TASK}
+					checked={activeTab === editorTabs.TASK}
+				/>
+				Task
+			</label>
+		</li>
+		<li>
+			<label>
+				<input
+					type="radio"
+					name="editor-tab"
+					id={editorTabs.PROPERTIES}
+					checked={activeTab === editorTabs.PROPERTIES}
+				/>
+				Properties
+			</label>
+		</li>
+
+		<!-- <button class="tab" class:active-tab={activeTab === 'task'} onclick={() => (activeTab = 'task')}
 			>Task</button
 		>
 		<button
 			class="tab"
 			class:active-tab={activeTab === 'properties'}
 			onclick={() => (activeTab = 'properties')}>Properties</button
-		>
-	</div>
+		> -->
+	</ul>
 
 	<div class="top">
 		<h1>Active Feature</h1>
@@ -44,7 +78,7 @@
 	</div>
 
 	<div class="page">
-		{#if activeTab === 'task'}
+		{#if activeTab === editorTabs.TASK}
 			<div class="task" transition:fly={{ ...flyParams, x: -flyParams.x }}>
 				<fieldset>
 					<div>
@@ -81,7 +115,7 @@
 					</div>
 				</fieldset>
 			</div>
-		{:else}
+		{:else if activeTab === editorTabs.PROPERTIES}
 			<div class="properties" transition:fly={flyParams}>
 				<EditorTable />
 			</div>
@@ -96,9 +130,6 @@
 		max-height: 600px;
 
 		position: absolute;
-
-		border-radius: 4px;
-		background-color: var(--base);
 
 		inset-inline-start: calc(anchor(end) + 1.25em);
 		inset-block-start: calc(anchor(start) + 1.25em);
@@ -125,24 +156,39 @@
 		justify-content: space-between;
 	}
 
-	.tabs {
+	.editor-tabs {
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		gap: 8px;
 
-		padding: 8px;
+		list-style-type: none;
 	}
-	.tab {
-		padding: 2px 8px;
-		background-color: transparent;
-		border-radius: 100px;
-		color: inherit;
+	.editor-tabs label,
+	.editor-tabs input {
+		text-align: center;
 
-		border: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		padding: 0.4rem 0.5rem;
+		cursor: pointer;
+
+		text-decoration-skip-ink: none;
 	}
-	.active-tab {
-		background-color: var(--surface-2);
+
+	.editor-tabs input[type='radio'] {
+		display: none;
+	}
+
+	.editor-tabs label:hover {
+		text-decoration: underline var(--text);
+	}
+	.editor-tabs label:has(> input[type='radio']:checked) {
+		background-color: var(--subtext-0);
+		border-radius: 100px;
+		padding: 2px 8px;
 	}
 
 	.top {

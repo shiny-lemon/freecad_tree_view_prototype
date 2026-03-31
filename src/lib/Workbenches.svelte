@@ -14,19 +14,11 @@
 
 <style>
 	.workbench-tabs {
-		background-color: var(--crust);
-		padding: 0.35rem 0.5rem;
-		border-radius: 2rem;
-		border: solid 1px var(--overlay-0);
-
 		display: flex;
 		gap: 0.5rem;
 
 		list-style-type: none;
-		margin: 0;
-
-		transition-property: width;
-		transition-duration: 3s;
+		padding: 0;
 	}
 
 	.workbench-tabs label,
@@ -38,8 +30,11 @@
 		justify-content: center;
 
 		padding: 0.4rem 0.5rem;
-		border-radius: 2rem;
 		cursor: pointer;
+
+		font-size: 1.25rem;
+
+		text-decoration-skip-ink: none;
 	}
 
 	.workbench-tabs input[type='radio'] {
@@ -47,10 +42,9 @@
 	}
 
 	.workbench-tabs label:hover {
-		background-color: var(--surface-0);
+		text-decoration: underline var(--text);
 	}
 	.workbench-tabs input[type='radio']:checked + label {
-		color: var(--crust);
-		background-color: var(--blue);
+		text-decoration: 0.175rem underline var(--contrast);
 	}
 </style>

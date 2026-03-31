@@ -1,6 +1,6 @@
 :root {
 	/* Pure colours (https://catppuccin.com/palette/) */
-	--rosewater: #f5e0dc;
+	/* --rosewater: #f5e0dc;
 	--flamingo: #f2cdcd;
 	--pink: #f5c2e7;
 	--mauve: #cba6f7;
@@ -31,10 +31,29 @@
 	--mantle: #181825;
 	--crust: #11111b;
 
-	--contrast: #0070ff;
+	--contrast: #0070ff; */
+
+	/* New colour scheme */
+
+	--alert-1: rgb(178, 38, 38);
+	--alert-0: rgb(214, 145, 34);
+
+	--contrast: #1a5fb4;
+
+	--text: #000000;
+	--subtext-1: #c0bfbc;
+	--subtext-0: #deddda;
+
+	--overlay-0: #ffffff;
+
+	--surface-0: #deddda;
+
+	--background-1: #ededed;
+	--background-0: #f6f5f4;
 
 	/* Definitions */
 	color: var(--text);
+	background-color: var(--background-0);
 
 	font-family: 'Inter', sans-serif;
 	font-optical-sizing: auto;
@@ -57,12 +76,32 @@ h1,
 	font-weight: bolder;
 }
 
-legend {
-	font-weight: 500;
-}
-
 fieldset {
 	border: none;
+	margin: 1rem 0.5rem;
+}
+
+fieldset>legend {
+	font-weight: 500;
+	font-size: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+
+fieldset>ol,
+fieldset>ul {
+	list-style: none;
+	padding: 0;
+
+	margin: 0;
+}
+
+fieldset:not(:hover) ol>li:nth-child(even),
+fieldset:not(:hover) ul>li:nth-child(even) {
+	background-color: var(--background-0);
+}
+
+fieldset li:hover {
+	background-color: var(--background-0);
 }
 
 input {
@@ -81,7 +120,6 @@ input[type='radio'] {
 	margin-right: 4px;
 
 	position: relative;
-	top: 4px;
 }
 
 input[type='radio']:checked {
@@ -108,7 +146,18 @@ button.icon {
 	border: none;
 	color: inherit;
 
-	display: flex;
+	cursor: pointer;
+
+	/* display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: center; */
+}
+
+button.icon:hover {
+	background-color: var(--subtext-0);
+}
+
+div.overlay {
+	background-color: var(--overlay-0);
+	border: 1px solid var(--subtext-1);
 }

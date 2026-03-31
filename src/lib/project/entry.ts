@@ -77,3 +77,26 @@ export const rename = (entries: Entry[], at: number, name: string) => {
 	entryToRename.name = name;
 	return entries;
 };
+
+// We actually don't really care if its a joint, a feature or a folder. It's all the same to the tree view!
+// So the "perfect" structure should just be gone.
+// Let's only implement *exactly* what is needed for the tree. No further typing/division/structure necessary.
+// All entries should be one
+// Each entry should have an image
+// entry can return null (can't have children) or [] (doesn't have children *right now* but is able to have them)
+// Instead of having all of these isXGroup (like isSketchType) which *technically* is more functional can't we just have a 'group' attribute
+// Then we can sort between all availabe groups - not computationally efficient, but time efficient for me!
+
+interface NewEntry {
+	id: string;
+	type: string;
+	group: string; // <---- Probably just a tuple in type instead :/
+	name: string;
+	children: NewEntry | null;
+}
+
+// type EntryGroup = [???, ???]
+// type Workbenches = "part-design" | "Surface"
+
+// Something in practice like this instead, maybe?
+// type = ["dress-up", "fillet"]

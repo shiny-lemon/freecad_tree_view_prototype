@@ -1,56 +1,47 @@
 <script lang="ts">
-	import { Box, ComponentIcon, type Icon as IconType } from '@lucide/svelte';
-	import type { Component } from 'svelte';
+	import IconToggle from '$lib/IconToggle.svelte';
+	import { newAnchorName } from '$lib/popover';
+	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
+	import { Pin, PinOff } from '@lucide/svelte';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	interface Props {
 		name: string;
 		image: string | null;
 		onclick: MouseEventHandler<HTMLButtonElement> | null | undefined;
-		DocumentIcon: typeof IconType;
+		documentIcon: string;
 	}
 
-	const { name, image, onclick, DocumentIcon }: Props = $props();
+	const { name, image, onclick, documentIcon }: Props = $props();
 
-	let namePopover: HTMLDivElement | null = $state(null);
-
-	const show = () => {
-		namePopover?.showPopover();
-	};
-	const hide = () => {
-		namePopover?.hidePopover();
-	};
-
-	const anchorName = '--' + crypto.randomUUID();
+	const anchorName = newAnchorName();
+	const { fleetingAnchorEvents, fleetingTarget } = newFleetingPopover();
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<button
-	class="part-item icon"
-	style:--anchor-name={anchorName}
-	onmouseover={show}
-	onmouseleave={hide}
-	onfocus={show}
-	onblur={hide}
-	{onclick}
->
-	{#if image != null}
-		<img class="thumbnail" src={image} alt="" />
-	{:else}
-		<DocumentIcon size="2.25rem" />
-	{/if}
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="part-item" style:--anchor-name={anchorName} {...fleetingAnchorEvents} tabindex="-1">
+	<div id="pin-popover" popover {@attach fleetingTarget}>
+		<IconToggle Checked={Pin} Unchecked={PinOff} />
+	</div>
 
-	<div id="name-popover" popover="hint" bind:this={namePopover}>
+	<div id="name-popover" popover="hint" {@attach fleetingTarget}>
 		<span>{name}</span>
 	</div>
-</button>
+
+	<button class="icon" {onclick}>
+		{#if image != null}
+			<img class="thumbnail" src={image} alt="" />
+		{:else}
+			<img class="thumbnail fallback" src={documentIcon} alt="" />
+		{/if}
+	</button>
+</div>
 
 <style>
 	.part-item {
 		height: 58px;
 		aspect-ratio: 1;
 
-		background-color: var(--surface-0);
 		border-radius: 4px;
 		overflow: hidden;
 
@@ -58,13 +49,30 @@
 		justify-content: center;
 		align-items: center;
 
-		color: var(--subtext-0);
-
 		anchor-name: var(--anchor-name);
+	}
+	.part-item:focus-within {
+		outline: 2px var(--contrast) solid;
 	}
 
 	.thumbnail {
 		height: 58px;
+		background-color: var(--surface-0);
+	}
+	.thumbnail.fallback {
+		height: 48px;
+		padding: 12px;
+	}
+
+	#pin-popover {
+		position-anchor: var(--anchor-name);
+		position: absolute;
+		position-area: span-end start;
+		margin-top: -1rem;
+
+		height: 24px;
+		border-radius: 50%;
+		border: none;
 	}
 
 	#name-popover {
@@ -75,8 +83,7 @@
 		font-size: 1rem;
 		font-family: inherit;
 
-		background-color: var(--overlay-2);
-		color: var(--base);
+		background-color: var(--surface-0);
 		border: none;
 		border-radius: 4px;
 

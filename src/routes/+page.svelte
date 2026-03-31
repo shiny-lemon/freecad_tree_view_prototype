@@ -4,34 +4,36 @@
 	import PartList from '$lib/parts/PartList.svelte';
 	import { displayType, documentTypeWorkbenches } from '$lib/project/document';
 	import Tree from '$lib/tree/Tree.svelte';
-	import { Minus, Square, X } from '@lucide/svelte';
 	import { fly } from 'svelte/transition';
 	import Workbenches from '../lib/Workbenches.svelte';
+
+	// Std
+	import coordinateSystem from '$lib/assets/tools/std/coordinate-system.svg';
+	import group from '$lib/assets/tools/std/group.svg';
+	import linkMake from '$lib/assets/tools/std/link-make.svg';
+
+	// Part design
+	import body from '$lib/assets/tools/part-design/body.svg';
+	import newSketch from '$lib/assets/tools/part-design/new-sketch.svg';
+	import pad from '$lib/assets/tools/part-design/pad.svg';
+	import revolution from '$lib/assets/tools/part-design/revolution.svg';
+	import additiveLoft from '$lib/assets/tools/part-design/additive-loft.svg';
+	import additivePipe from '$lib/assets/tools/part-design/additive-pipe.svg';
+	import pocket from '$lib/assets/tools/part-design/pocket.svg';
+	import hole from '$lib/assets/tools/part-design/hole.svg';
+	import groove from '$lib/assets/tools/part-design/groove.svg';
+	import subtractiveLoft from '$lib/assets/tools/part-design/subtractive-loft.svg';
+	import subtractivePipe from '$lib/assets/tools/part-design/subtractive-pipe.svg';
+	import fillet from '$lib/assets/tools/part-design/fillet.svg';
+	import chamfer from '$lib/assets/tools/part-design/chamfer.svg';
+	import mirrored from '$lib/assets/tools/part-design/mirrored.svg';
+	import linearPattern from '$lib/assets/tools/part-design/linear-pattern.svg';
 
 	const documentType = $derived(project.selected?.type);
 </script>
 
-{#snippet topBar()}
-	<div class="top-bar">
-		<div class="menu-items">
-			<img src="src/lib/assets/favicon.svg" alt="" height="14" />
-			<span>File</span>
-			<span>Edit</span>
-			<span>Window</span>
-			<span>Help</span>
-		</div>
-		<span class="project-name">*{project.name}</span>
-		<div class="window-controls">
-			<Minus size={14} />
-			<Square size={14} />
-			<X size={14} />
-		</div>
-	</div>
-{/snippet}
-
 <div class="app">
 	<header>
-		{@render topBar()}
 		{#if documentType}
 			<div class="workbenches-container">
 				{#key documentType}
@@ -45,9 +47,28 @@
 			</div>
 		{/if}
 		<div class="toolbar">
-			<button>PAD</button>
-			<button>REVOLVE</button>
-			<button>SKETCH</button>
+			<div class="std">
+				<button class="icon"> <img src={coordinateSystem} alt="" /></button>
+				<button class="icon"> <img src={group} alt="" /></button>
+				<button class="icon"> <img src={linkMake} alt="" /></button>
+			</div>
+			<div class="workbench">
+				<button class="icon"> <img src={body} alt="" /></button>
+				<button class="icon"> <img src={newSketch} alt="" /></button>
+				<button class="icon"> <img src={pad} alt="" /></button>
+				<button class="icon"> <img src={revolution} alt="" /></button>
+				<button class="icon"> <img src={additiveLoft} alt="" /></button>
+				<button class="icon"> <img src={additivePipe} alt="" /></button>
+				<button class="icon"> <img src={pocket} alt="" /></button>
+				<button class="icon"> <img src={hole} alt="" /></button>
+				<button class="icon"> <img src={groove} alt="" /></button>
+				<button class="icon"> <img src={subtractiveLoft} alt="" /></button>
+				<button class="icon"> <img src={subtractivePipe} alt="" /></button>
+				<button class="icon"> <img src={fillet} alt="" /></button>
+				<button class="icon"> <img src={chamfer} alt="" /></button>
+				<button class="icon"> <img src={mirrored} alt="" /></button>
+				<button class="icon"> <img src={linearPattern} alt="" /></button>
+			</div>
 		</div>
 	</header>
 	<main>
@@ -57,16 +78,19 @@
 		</div>
 		<Editor positionAnchor="--main-pane" active={true} />
 		<div class="view">
-			<h1>NEXT UP: ENTRIES AND FILTERS (PREV: FEATURES DRAG)</h1>
-			<p>
+			<!-- <h1>NEXT UP: ENTRIES AND FILTERS (PREV: FEATURES DRAG)</h1> -->
+			<!-- <p>
 				Make filters inheritnly in the entries method. Also make the entries method generic and just
 				dependent on this.type
-			</p>
+			</p> -->
+			<span class="info"
+				>FreeCAD Tree View Prototype • <a
+					href="https://github.com/shiny-lemon/freecad_tree_view_prototype"
+					target="_blank">Read More on GitHub</a
+				></span
+			>
 		</div>
 	</main>
-	<footer>
-		<span>FreeCAD Tree View Prototype • <a href="https://github.com/shiny-lemon/freecad_tree_view_prototype" target="_blank">Read More on GitHub</a></span>
-	</footer>
 </div>
 
 <style>
@@ -80,31 +104,14 @@
 
 	header {
 		width: 100vw;
-		background-color: var(--base);
 
 		font-size: 0.6875rem;
 
-		.top-bar {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 0px 4px;
+		border-bottom: 2px solid var(--subtext-1);
+	}
 
-			height: 24px;
-			background-color: var(--crust);
-			color: var(--overlay-1);
-
-			.menu-items {
-				display: flex;
-				align-items: center;
-				gap: 1rem;
-				color: var(--subtext-0);
-			}
-		}
-
-		.project-name {
-			font-weight: 600;
-		}
+	.document-type {
+		font-size: 1.5rem;
 	}
 
 	.workbenches {
@@ -128,29 +135,37 @@
 		flex: 1;
 		width: 100vw;
 		display: flex;
-		background-color: var(--mantle);
 
 		.pane {
 			width: 24rem;
-			margin: 8px;
-			border-radius: 4px;
 
 			display: flex;
 
-			background-color: var(--base);
-
 			anchor-name: --main-pane;
+
+			border-right: 2px solid var(--subtext-0);
 		}
 
 		.view {
 			flex: 1;
+			overflow: hidden;
 		}
 	}
-	footer {
-		height: 24px;
-		width: 100vw;
-		background-color: var(--crust);
+
+	.view > .info {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		margin: 0.5rem;
+	}
+
+	.toolbar {
 		display: flex;
-		justify-content: center;
+		gap: 1rem;
+
+		margin: 0.75rem 1.5rem;
+	}
+	.toolbar .icon > img {
+		height: 2rem;
 	}
 </style>

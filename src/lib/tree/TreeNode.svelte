@@ -1,29 +1,21 @@
 <script lang="ts">
-	import { ChevronDown, ChevronRight } from '@lucide/svelte';
+	import { ChevronDown, ChevronRight, Eye, EyeOff, CircleAlert } from '@lucide/svelte';
 	import TreeNode from './TreeNode.svelte';
 	import IconToggle from '$lib/IconToggle.svelte';
 	import type { DragEventHandler } from 'svelte/elements';
-	import { findIndex, isEntryWithChildren, type Entry } from '../project/entry.ts';
-	import type { Attachment } from 'svelte/attachments';
+	import { isEntryWithChildren, type Entry } from '../project/entry.ts';
 	import { addLookup, findEntry } from './position.svelte.ts';
+	import { newAnchorName } from '$lib/popover';
+	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
+	import { featureIcon } from '$lib/project/feature';
 
 	interface Props {
 		entry: Entry;
 		index: number;
-		level?: number;
 		contentRect?: DOMRectReadOnly | null;
 	}
 
-	let { entry, index, level = 0, contentRect = $bindable(null) }: Props = $props();
-
-	let showChildren = $state(false);
-
-	let thisNode: HTMLDivElement;
-	// const ondragstart: DragEventHandler<HTMLElement> = (event) => {
-	// 	if (event.target != thisNode) return;
-
-	// 	showChildren = false;
-	// };
+	let { entry, index, contentRect = $bindable(null) }: Props = $props();
 
 	const ondragstart: DragEventHandler<HTMLElement> = (event) => {
 		console.log(event);
@@ -34,36 +26,66 @@
 
 		if (draggenEntry === undefined) throw Error('No entry found in drag start.');
 
+		showChildren = false;
+
 		event.dataTransfer.setData('text/plain', index.toString());
 	};
+
+	const anchorName = newAnchorName();
+	const { fleetingAnchorEvents, fleetingTarget } = newFleetingPopover();
+
+	let showChildren = $state(false);
+	let nameEditable = $state(false);
 </script>
 
-<div
-	class="node"
+<li
+	class={{ node: true }}
 	draggable="true"
 	role="treeitem"
 	tabindex="0"
 	aria-selected="false"
-	bind:this={thisNode}
+	aria-expanded={showChildren}
 	bind:contentRect
 	{ondragstart}
 	{@attach (element) => addLookup(element, entry)}
 >
 	<span>
 		<IconToggle Unchecked={ChevronRight} Checked={ChevronDown} bind:checked={showChildren} />
+		{#await featureIcon(entry.type) then icon}
+			<img class="tool-icon" src={icon} alt="" />
+		{/await}
 
 		<!-- TODO Input messes dragging up. Should only be activated with double-click. Hard to do. -->
-		<input type="text" value={entry.name} class="disguised-input" />
+		<span
+			class="name-input"
+			tabindex="0"
+			role="textbox"
+			contenteditable={nameEditable}
+			oninput={() => console.log('Input!')}
+			ondblclick={() => (nameEditable = !nameEditable)}>{entry.name}</span
+		>
+		<!-- <input type="text" value={entry.name} class="disguised-input" /> -->
+
+		<!-- Add dynamic issues -->
+		<div class="issues">
+			<div class="issue" style:--anchor-name={anchorName} {...fleetingAnchorEvents}>
+				<CircleAlert color="var(--alert-0)" />
+
+				<div id="issue-popover" popover="hint" {@attach fleetingTarget}>
+					<span>Sketch not fully constrained</span>
+				</div>
+			</div>
+		</div>
 	</span>
 
 	{#if isEntryWithChildren(entry) && showChildren}
-		<div class="children" style="--level: {level + 1}rem;">
+		<ul class="children" role="group">
 			{#each entry.children as child}
-				<TreeNode entry={child} level={level + 1} {index} />
+				<TreeNode entry={child} {index} />
 			{/each}
-		</div>
+		</ul>
 	{/if}
-</div>
+</li>
 
 <style>
 	.node {
@@ -72,10 +94,42 @@
 		align-content: center;
 
 		padding: 0.25rem;
-		padding-left: var(--level);
 	}
+	.node.selected {
+		color: var(--surface-0);
+		background-color: var(--contrast);
+	}
+
 	.node > span {
 		display: flex;
 		align-content: center;
+	}
+
+	.tool-icon {
+		height: 1.75rem;
+	}
+
+	.name-input {
+		width: 100%;
+	}
+
+	.issue {
+		anchor-name: var(--anchor-name);
+		padding: 0 4px;
+	}
+
+	#issue-popover {
+		position-anchor: var(--anchor-name);
+		position: absolute;
+		position-area: right;
+
+		margin-left: 0.5rem;
+
+		font-size: 0.9rem;
+		font-family: inherit;
+
+		background-color: var(--surface-0);
+		border: none;
+		border-radius: 4px;
 	}
 </style>

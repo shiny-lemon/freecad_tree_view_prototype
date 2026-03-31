@@ -64,43 +64,43 @@
 		<button class="icon" id="filter-anchor" popovertarget="filter-popover">
 			<ListFilter size={20} />
 		</button>
-		<div class="filter-popup" id="filter-popover" popover="auto">
+		<div class="filter-popup overlay" id="filter-popover" popover="auto">
 			<form action="#">
 				<!-- onchange={({ target }) => (filtered = target?.value)} -->
 				<fieldset>
 					<legend>Show</legend>
 
-					<div>
-						<div>
+					<ul>
+						<li>
 							<input type="radio" id="features" name="filter" value="BOB" checked />
 							<label for="features">All features</label>
-						</div>
-					</div>
+						</li>
 
-					<div>
-						<input type="radio" id="sketches" name="filter" value="BOB" />
-						<label for="sketches">Sketches</label>
-					</div>
+						<li>
+							<input type="radio" id="sketches" name="filter" value="BOB" />
+							<label for="sketches">Sketches</label>
+						</li>
 
-					<div>
-						<input type="radio" id="modeling" name="filter" value="BOB" />
-						<label for="modeling">Modeling</label>
-					</div>
+						<li>
+							<input type="radio" id="modelling" name="filter" value="BOB" />
+							<label for="modeling">Modelling</label>
+						</li>
 
-					<div>
-						<input type="radio" id="patterns" name="filter" value="BOB" />
-						<label for="patterns">Patterns</label>
-					</div>
+						<li>
+							<input type="radio" id="patterns" name="filter" value="BOB" />
+							<label for="patterns">Patterns</label>
+						</li>
 
-					<div>
-						<input type="radio" id="dress-ups" name="filter" value="BOB" />
-						<label for="dress-ups">Dress-ups</label>
-					</div>
+						<li>
+							<input type="radio" id="dress-ups" name="filter" value="BOB" />
+							<label for="dress-ups">Dress-ups</label>
+						</li>
 
-					<div>
-						<input type="radio" id="issues" name="filter" value="issues" />
-						<label for="issues">Issues</label>
-					</div>
+						<li>
+							<input type="radio" id="issues" name="filter" value="issues" />
+							<label for="issues">Issues</label>
+						</li>
+					</ul>
 				</fieldset>
 			</form>
 		</div>
@@ -116,7 +116,7 @@
 			<div class="grab-indicator"></div>
 		</div>
 	</div>
-	<div class="nodes" role="tree" tabindex="-1" {ondragover} {ondrop}>
+	<ul class="nodes" role="tree" tabindex="-1" {ondragover} {ondrop}>
 		{#each entries as entry, index}
 			<TreeNode {entry} {index} />
 		{/each}
@@ -124,7 +124,7 @@
 			<!-- <small>No {filterNames[filtered]} in tree.</small> -->
 			<small>No [ERROR] in tree.</small>
 		{/if}
-	</div>
+	</ul>
 </div>
 
 <style>
@@ -139,11 +139,15 @@
 		margin: 8px 0;
 		inset: auto;
 		position-area: block-end span-inline-end;
+		padding: 0;
+	}
 
-		border-radius: 4px;
-		border: none;
-		background-color: var(--overlay-2);
-		color: var(--base);
+	fieldset li {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+
+		padding: 8px;
 	}
 
 	.top {
@@ -174,10 +178,12 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
+
+		top: 600px;
 	}
 
 	.stick {
-		background-color: #ced6f4;
+		background-color: var(--text);
 		height: 0.25rem;
 		flex: 1;
 
@@ -185,7 +191,7 @@
 	}
 
 	.handle {
-		background-color: #ced6f4;
+		background-color: var(--text);
 		height: 24px;
 		width: 36px;
 		display: flex;
@@ -199,6 +205,6 @@
 	.grab-indicator {
 		height: 4px;
 		width: 16px;
-		background-color: green;
+		background-color: var(--subtext-0);
 	}
 </style>
