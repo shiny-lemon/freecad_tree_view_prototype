@@ -32,6 +32,8 @@
 		padding: 0.4rem 0.5rem;
 		cursor: pointer;
 
+		font-size: 1.25rem;
+
 		text-decoration-skip-ink: none;
 	}
 

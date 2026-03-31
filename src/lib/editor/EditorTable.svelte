@@ -131,10 +131,17 @@
 <style>
 	tr {
 		text-align: left;
+		font-weight: normal;
+	}
+
+	th {
+		font-weight: normal;
 	}
 
 	thead {
-		font-weight: 900;
-		color: green;
+		background-color: var(--background-1);
+	}
+	thead th {
+		font-weight: bold;
 	}
 </style>

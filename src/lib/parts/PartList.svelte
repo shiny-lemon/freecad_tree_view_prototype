@@ -58,19 +58,6 @@
 		inset: auto;
 		position-area: block-end span-inline-end;
 	}
-	#add-part-popover > fieldset {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	.new-part-list {
-		list-style: none;
-		padding: 0;
-	}
-	.add-part:not(:hover) .new-part-list > li:nth-child(even) {
-		background-color: var(--background-0);
-	}
 
 	.part-option {
 		width: 100%;
@@ -83,9 +70,6 @@
 		border: none;
 
 		background-color: transparent;
-	}
-	.part-option:hover {
-		background-color: var(--background-0);
 	}
 
 	.part-option > img {

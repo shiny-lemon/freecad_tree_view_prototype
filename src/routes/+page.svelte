@@ -83,7 +83,7 @@
 				Make filters inheritnly in the entries method. Also make the entries method generic and just
 				dependent on this.type
 			</p> -->
-			<span
+			<span class="info"
 				>FreeCAD Tree View Prototype • <a
 					href="https://github.com/shiny-lemon/freecad_tree_view_prototype"
 					target="_blank">Read More on GitHub</a
@@ -108,6 +108,10 @@
 		font-size: 0.6875rem;
 
 		border-bottom: 2px solid var(--subtext-1);
+	}
+
+	.document-type {
+		font-size: 1.5rem;
 	}
 
 	.workbenches {
@@ -144,12 +148,22 @@
 
 		.view {
 			flex: 1;
+			overflow: hidden;
 		}
+	}
+
+	.view > .info {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		margin: 0.5rem;
 	}
 
 	.toolbar {
 		display: flex;
 		gap: 1rem;
+
+		margin: 0.75rem 1.5rem;
 	}
 	.toolbar .icon > img {
 		height: 2rem;

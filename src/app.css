@@ -76,12 +76,32 @@ h1,
 	font-weight: bolder;
 }
 
-legend {
-	font-weight: 500;
-}
-
 fieldset {
 	border: none;
+	margin: 1rem 0.5rem;
+}
+
+fieldset>legend {
+	font-weight: 500;
+	font-size: 1.5rem;
+	margin-bottom: 0.5rem;
+}
+
+fieldset>ol,
+fieldset>ul {
+	list-style: none;
+	padding: 0;
+
+	margin: 0;
+}
+
+fieldset:not(:hover) ol>li:nth-child(even),
+fieldset:not(:hover) ul>li:nth-child(even) {
+	background-color: var(--background-0);
+}
+
+fieldset li:hover {
+	background-color: var(--background-0);
 }
 
 input {
@@ -100,7 +120,6 @@ input[type='radio'] {
 	margin-right: 4px;
 
 	position: relative;
-	top: 4px;
 }
 
 input[type='radio']:checked {
