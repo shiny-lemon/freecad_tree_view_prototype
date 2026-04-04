@@ -1,102 +1,232 @@
-// Many of the things in `feature.ts` should be generalized to entry.ts
-// As joints and parts in an assembly are not features, but behave in mostly the same way
-// Therefore good to split them up
-// Can't call it object, because of JavaScript and its names...
-
-import type { Feature, FeatureType } from './feature';
-import type { JointType } from './joint';
-
 export interface Entry {
 	id: string;
 	type: EntryType;
 	name: string;
+	children: Entry[] | null;
 }
 
-export const folderType = 'folder' as const;
-export type FolderType = typeof folderType;
-export interface Folder extends Entry {
-	type: FolderType;
-	children: Entry[];
-}
-
-export const partEntryType = 'part' as const;
-export type PartEntryType = typeof partEntryType;
-export interface PartEntry extends Entry {
-	type: PartEntryType;
-}
-
-export type EntryType = FeatureType | JointType | FolderType | PartEntryType;
-
-export const isEntryWithChildren = (entry: Entry): entry is Folder | Feature => {
-	const typedEntry = entry as Folder | Feature;
-	return typedEntry.children !== undefined;
-};
-
-export const folder = (name: string): Folder => {
-	const folder: Folder = { id: crypto.randomUUID(), type: folderType, name, children: [] };
-
-	return folder;
-};
-
-export const insert = (entry: Entry, into: Entry[], at: number = -1) => {
-	if (at === -1) {
-		into.push(entry);
-	} else {
-		into.splice(at, 0, entry);
+export const createEntry = (type: EntryType, name: string, allowChildren = true): Entry => {
+	return {
+		id: crypto.randomUUID(),
+		type,
+		name,
+		children: allowChildren ? [] : null
 	}
-	return into;
-};
-
-export const seek = <TEntry extends Entry>(entries: TEntry[], at: number = -1) => {
-	const found = entries.at(at);
-
-	if (found === undefined) throw Error(`Cannot find entry at ${at} in ${entries}`);
-
-	return found;
-};
-
-export const findIndex = <TEntry extends Entry>(entries: TEntry[], desired: TEntry) => {
-	console.log('Entries: ', entries);
-	const find = entries.findIndex(({ id }) => id === desired.id);
-
-	if (find === -1) throw Error(`Cannot find desired entry ${desired} in ${entries}`);
-
-	return find;
-};
-
-// https://svelte.dev/docs/svelte/svelte-js-files
-export const move = (entries: Entry[], at: number, to: number) => {
-	const entryToMove = seek(entries, at);
-	entries.splice(at, 1);
-	entries.splice(to, 0, entryToMove);
-	return entries;
-};
-
-export const rename = (entries: Entry[], at: number, name: string) => {
-	const entryToRename = seek(entries, at);
-	entryToRename.name = name;
-	return entries;
-};
-
-// We actually don't really care if its a joint, a feature or a folder. It's all the same to the tree view!
-// So the "perfect" structure should just be gone.
-// Let's only implement *exactly* what is needed for the tree. No further typing/division/structure necessary.
-// All entries should be one
-// Each entry should have an image
-// entry can return null (can't have children) or [] (doesn't have children *right now* but is able to have them)
-// Instead of having all of these isXGroup (like isSketchType) which *technically* is more functional can't we just have a 'group' attribute
-// Then we can sort between all availabe groups - not computationally efficient, but time efficient for me!
-
-interface NewEntry {
-	id: string;
-	type: string;
-	group: string; // <---- Probably just a tuple in type instead :/
-	name: string;
-	children: NewEntry | null;
 }
 
-// type EntryGroup = [???, ???]
-// type Workbenches = "part-design" | "Surface"
+export const filter = (entries: Entry[], predicate: (entry: Entry) => boolean): Entry[] => {
+	return entries.filter(predicate);
+}
 
-// Something in practice like this instead, maybe?
-// type = ["dress-up", "fillet"]
+export const positionRelation = {
+	BEFORE: "before",
+	AFTER: "after",
+} as const;
+
+export interface Position {
+	pathIds: string[];
+	relation: typeof positionRelation[keyof typeof positionRelation];
+	in: boolean;
+}
+
+export const insert = (entries: Entry[],
+	entry: Entry,
+	at: Position = { pathIds: [], relation: positionRelation.AFTER, in: false }
+): Entry[] => {
+	const [pathId, ...pathIdsRemaining] = at.pathIds;
+
+	if (at.in && at.pathIds.length === 0) throw new Error("Cannot insert into entry when no pathId is specified.")
+
+	if (at.pathIds.length === 0) {
+		const pathIndex = at.relation === positionRelation.AFTER ? entries.length : 0;
+
+		return entries.toSpliced(pathIndex, 0, entry);
+	}
+
+	if (!at.in && at.pathIds.length === 1) {
+		const pathIndex = entries.findIndex((value) => value.id === pathId);
+
+		const afterOffset = at.relation === positionRelation.AFTER ? 1 : 0;
+
+		return entries.toSpliced(pathIndex + afterOffset, 0, entry);
+	}
+
+	if (!entries.some((value) => value.id === pathId)) throw new Error(`Given pathId: ${pathId} is invalid`);
+	return entries.map((value) => {
+		if (value.id !== pathId) return value;
+
+		if (value.children === null) throw new Error(`Cannot insert into entry with type ${value.type} which does not allow children.`);
+
+		const nextIn = pathIdsRemaining.length === 0 ? false : at.in
+		const nextAt = { pathIds: pathIdsRemaining, relation: at.relation, in: nextIn }
+
+		value.children = insert(value.children, entry, nextAt);
+
+		return value
+	})
+}
+
+const findRecursiveAndRemove = (entries: Entry[], pathIds: string[]): { entry: Entry, remaining: Entry[] } => {
+	const [pathId, ...pathIdsRemaining] = pathIds;
+
+	if (pathIds.length === 1) {
+		const foundEntryIndex = entries.findIndex((value) => value.id === pathId);
+
+		if (foundEntryIndex === -1) throw new Error(`Cannot find entry with ${pathIds} in entries.`)
+
+		const remainingEntries = entries.toSpliced(foundEntryIndex, 1);
+		const finalEntry = entries.at(foundEntryIndex) as Entry;
+
+		return { entry: finalEntry, remaining: remainingEntries }
+
+	};
+
+	const nextEntryIndex = entries.findIndex((value) => value.id === pathId);
+
+	if (nextEntryIndex === -1) throw new Error(`Given pathId: ${pathId} is invalid`);
+
+	// Array.slice(...) apparently does not do deep-copy. This seems a bit like a hack, but it works!
+	const nextEntry = structuredClone(entries.at(nextEntryIndex) as Entry);
+
+	if (nextEntry.children === null) throw new Error(`Cannot insert into entry with type ${nextEntry.type} which does not allow children.`);
+
+	const nextRecursive = findRecursiveAndRemove(nextEntry.children, pathIdsRemaining);
+
+	nextEntry.children = nextRecursive.remaining // <--- TODO Remove mutation so structuredClone is not needed.
+
+	const remaining = entries.toSpliced(nextEntryIndex, 1, nextEntry)
+	return { entry: nextRecursive.entry, remaining }
+}
+
+export const move = (entries: Entry[], pathIds: string[], to: Position) => {
+	const { entry, remaining } = findRecursiveAndRemove(entries, pathIds);
+
+	return insert(remaining, entry, to);
+}
+
+export const entryType = {
+	SKETCH: "sketch",
+
+	PAD: 'pad',
+	POCKET: 'pocket',
+
+	LINEAR: 'linear',
+	RADIAL: 'radial',
+
+	FILLET: 'fillet',
+	CHAMFER: 'chamfer',
+
+	FIXED: 'fixed',
+	REVOLUTE: 'revolute',
+	CYLINDRICAL: 'cylindrical',
+	SLIDER: 'slider',
+	BALL: 'ball',
+
+	DISTANCE: 'distance',
+	PARALLEL: 'parallel',
+	PERPENDICULAR: 'perpendicular',
+	ANGLE: 'angle',
+
+	RACK_AND_PINION: 'rack-and-pinion',
+	SCREW: 'screw',
+	GEARS: 'gears',
+	BELT: 'belt',
+
+	BODY: "body",
+
+	FOLDER: "folder",
+} as const;
+type EntryType = typeof entryType[keyof typeof entryType]
+
+const toolsPath = "src/lib/assets/tools/" as const;
+export const entryTypeIcon = {
+	[entryType.SKETCH]: toolsPath + "part-design/new-sketch",
+
+	[entryType.PAD]: toolsPath + "part-design/pad",
+	[entryType.POCKET]: toolsPath + "part-design/pocket",
+
+	[entryType.LINEAR]: toolsPath + "part-design/linear-pattern",
+	[entryType.RADIAL]: toolsPath + "part-design/",
+
+	[entryType.FILLET]: toolsPath + "part-design/fillet",
+	[entryType.CHAMFER]: toolsPath + "part-design/chamfer",
+
+	[entryType.FIXED]: toolsPath + "assembly/",
+	[entryType.REVOLUTE]: toolsPath + "assembly/",
+	[entryType.CYLINDRICAL]: toolsPath + "assembly/",
+	[entryType.SLIDER]: toolsPath + "assembly/",
+	[entryType.BALL]: toolsPath + "assembly/",
+
+	[entryType.DISTANCE]: toolsPath + "assembly/",
+	[entryType.PARALLEL]: toolsPath + "assembly/",
+	[entryType.PERPENDICULAR]: toolsPath + "assembly/",
+	[entryType.ANGLE]: toolsPath + "assembly/",
+
+	[entryType.RACK_AND_PINION]: toolsPath + "assembly/",
+	[entryType.SCREW]: toolsPath + "assembly/",
+	[entryType.GEARS]: toolsPath + "assembly/",
+	[entryType.BELT]: toolsPath + "assembly/",
+
+	[entryType.BODY]: toolsPath + "part-design/body",
+
+	[entryType.FOLDER]: toolsPath + "std/group",
+
+} as const satisfies Record<EntryType, string>
+
+const entryCategory = {
+	SKETCH: "sketch",
+	MODELLING: "modelling",
+	PATTERN: "pattern",
+	DRESS_UP: "dress-up",
+	JOINT_BASIC: "joint-basic",
+	JOINT_FACE: "joint-face",
+	JOINT_ADVANCED: "joint-advanced",
+	BODY: "body",
+	NO_CATEGORY: "no-category",
+} as const;
+export type EntryCategory = typeof entryCategory[keyof typeof entryCategory]
+
+export const entryTypeCategory = {
+	[entryType.SKETCH]: entryCategory.SKETCH,
+
+	[entryType.PAD]: entryCategory.MODELLING,
+	[entryType.POCKET]: entryCategory.MODELLING,
+
+	[entryType.LINEAR]: entryCategory.PATTERN,
+	[entryType.RADIAL]: entryCategory.PATTERN,
+
+	[entryType.FILLET]: entryCategory.DRESS_UP,
+	[entryType.CHAMFER]: entryCategory.DRESS_UP,
+
+	[entryType.FIXED]: entryCategory.JOINT_BASIC,
+	[entryType.REVOLUTE]: entryCategory.JOINT_BASIC,
+	[entryType.CYLINDRICAL]: entryCategory.JOINT_BASIC,
+	[entryType.SLIDER]: entryCategory.JOINT_BASIC,
+	[entryType.BALL]: entryCategory.JOINT_BASIC,
+
+	[entryType.DISTANCE]: entryCategory.JOINT_FACE,
+	[entryType.PARALLEL]: entryCategory.JOINT_FACE,
+	[entryType.PERPENDICULAR]: entryCategory.JOINT_FACE,
+	[entryType.ANGLE]: entryCategory.JOINT_FACE,
+
+	[entryType.RACK_AND_PINION]: entryCategory.JOINT_ADVANCED,
+	[entryType.SCREW]: entryCategory.JOINT_ADVANCED,
+	[entryType.GEARS]: entryCategory.JOINT_ADVANCED,
+	[entryType.BELT]: entryCategory.JOINT_ADVANCED,
+
+	[entryType.BODY]: entryCategory.BODY,
+
+	[entryType.FOLDER]: entryCategory.NO_CATEGORY,
+} satisfies Record<EntryType, EntryCategory>;
+
+export const entryCategoryDisplayName = {
+	[entryCategory.SKETCH]: "Sketches",
+	[entryCategory.MODELLING]: "Modelling",
+	[entryCategory.PATTERN]: "Patterns",
+	[entryCategory.DRESS_UP]: "Dress-ups",
+	[entryCategory.JOINT_BASIC]: "Basic joints",
+	[entryCategory.JOINT_FACE]: "Face joints",
+	[entryCategory.JOINT_ADVANCED]: "Advanced joints",
+	[entryCategory.BODY]: "Bodies",
+	[entryCategory.NO_CATEGORY]: null,
+} as const satisfies Record<EntryCategory, string | null>

@@ -2,7 +2,7 @@
 	import { project } from '$lib/data/data.svelte';
 	import Editor from '$lib/editor/Editor.svelte';
 	import PartList from '$lib/parts/PartList.svelte';
-	import { displayType, documentTypeWorkbenches } from '$lib/project/document';
+	import { documentTypeDisplayName, documentTypeWorkbenches } from '$lib/project/document';
 	import Tree from '$lib/tree/Tree.svelte';
 	import { fly } from 'svelte/transition';
 	import Workbenches from '../lib/Workbenches.svelte';
@@ -32,20 +32,28 @@
 	const documentType = $derived(project.selected?.type);
 </script>
 
+<dialog open>
+	<form method="dialog">
+		<h1>Hello!</h1>
+		<p>Explanation thing!</p>
+		<button>Sure!</button>
+	</form>
+</dialog>
+
 <div class="app">
 	<header>
-		{#if documentType}
-			<div class="workbenches-container">
+		<div class="workbenches-container">
+			{#if documentType}
 				{#key documentType}
 					<div class="workbenches" transition:fly={{ y: 48 }}>
 						<h2 class="document-type">
-							{displayType(documentType)}
+							{documentTypeDisplayName[documentType]}
 						</h2>
 						<Workbenches names={documentTypeWorkbenches[documentType]} />
 					</div>
 				{/key}
-			</div>
-		{/if}
+			{/if}
+		</div>
 		<div class="toolbar">
 			<div class="std">
 				<button class="icon"> <img src={coordinateSystem} alt="" /></button>
@@ -74,15 +82,10 @@
 	<main>
 		<div class="pane">
 			<PartList items={project.documents} />
-			<Tree />
+			<Tree entries={project.selected?.entries ?? []} selectedName={project.selected?.name ?? ''} />
 		</div>
 		<Editor positionAnchor="--main-pane" active={true} />
 		<div class="view">
-			<!-- <h1>NEXT UP: ENTRIES AND FILTERS (PREV: FEATURES DRAG)</h1> -->
-			<!-- <p>
-				Make filters inheritnly in the entries method. Also make the entries method generic and just
-				dependent on this.type
-			</p> -->
 			<span class="info"
 				>FreeCAD Tree View Prototype • <a
 					href="https://github.com/shiny-lemon/freecad_tree_view_prototype"
@@ -94,6 +97,11 @@
 </div>
 
 <style>
+	:global(dialog::backdrop) {
+		background-image: linear-gradient(45deg, magenta, rebeccapurple, dodgerblue, green);
+		opacity: 0.75;
+	}
+
 	.app {
 		height: 100vh;
 		width: 100vw;

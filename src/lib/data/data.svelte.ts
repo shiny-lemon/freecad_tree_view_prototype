@@ -1,7 +1,7 @@
-import { newAssembly, newPart, type Part } from '$lib/project/document';
-import { insert, seek } from '$lib/project/entry';
-import { feature, featureType, type Feature } from '$lib/project/feature';
+import { documentType, newDocument, type Document } from '$lib/project/document';
+import { createEntry, entryType, insert, positionRelation, type Entry } from '$lib/project/entry';
 import { newProject, type Project } from '$lib/project/project';
+import { runTransactions, type Transaction } from '$lib/project/transaction';
 
 const thumbnail = async (name: string) =>
 	/* @vite-ignore */
@@ -10,66 +10,90 @@ const thumbnail = async (name: string) =>
 // Initialization of project
 const initialProject = newProject('Excavator Arm');
 
-const parts: Part[] = [];
+const documents: Document[] = [];
 
 // BASE
-const partBase = newPart('Base', await thumbnail('Base'));
+const partBase = newDocument(documentType.PART, 'Base', await thumbnail('Base'));
 
-insert(feature(featureType.PAD, 'Pad Profile'), partBase.features);
-insert(feature(featureType.SKETCH, 'Sketch Profile'), seek(partBase.features).children);
+const partBaseTransaction: Transaction = (entries) => {
+	const entriesStack = [entries];
 
-insert(feature(featureType.POCKET, 'Pocket Negative'), partBase.features);
-insert(feature(featureType.SKETCH, 'Sketch Negative'), seek(partBase.features).children);
+	const last = (entriesStack: Entry[][]) => entriesStack.at(-1) as Entry[]
+	const sketchParentAt = (id: string) => { return { pathIds: [id], relation: positionRelation.AFTER, in: true } }
 
-insert(feature(featureType.PAD, 'Pad Cylinder Holder'), partBase.features);
-insert(feature(featureType.SKETCH, 'Sketch Cylinder Holder'), seek(partBase.features).children);
-insert(feature(featureType.LINEAR, 'Linear Pattern Cylinder Holder'), partBase.features);
+	// Profile
+	const padProfile = createEntry(entryType.PAD, "Pad Profile")
+	entriesStack.push(insert(last(entriesStack), padProfile));
 
-insert(feature(featureType.PAD, 'Pad Arm Holder'), partBase.features);
-insert(feature(featureType.SKETCH, 'Sketch Arm Holder'), seek(partBase.features).children);
-insert(feature(featureType.LINEAR, 'Linear Pattern Arm Holder'), partBase.features);
+	const sketchPadProfile = createEntry(entryType.SKETCH, "Sketch Profile", false)
+	entriesStack.push(insert(last(entriesStack), sketchPadProfile, sketchParentAt(padProfile.id)))
 
-parts.push(partBase);
+	// Negative
+	const pocketNegative = createEntry(entryType.POCKET, "Pocket Negative")
+	entriesStack.push(insert(last(entriesStack), pocketNegative));
+
+	const sketchNegative = createEntry(entryType.SKETCH, "Sketch Negative", false)
+	entriesStack.push(insert(last(entriesStack), sketchNegative, sketchParentAt(pocketNegative.id)))
+
+	// Cylinder Holder
+	const padCylinderHolder = createEntry(entryType.PAD, "Pad Cylinder Holder")
+	entriesStack.push(insert(last(entriesStack), padCylinderHolder));
+
+	const sketchCylinderHolder = createEntry(entryType.SKETCH, "Sketch Cylinder Holder", false)
+	entriesStack.push(insert(last(entriesStack), sketchCylinderHolder, sketchParentAt(padCylinderHolder.id)))
+
+	const linearCylinderHolder = createEntry(entryType.LINEAR, "Linear Pattern Cylinder Holder", false)
+	entriesStack.push(insert(last(entriesStack), linearCylinderHolder));
+
+	// Arm Holder
+	const padArmHolder = createEntry(entryType.PAD, "Pad Arm Holder")
+	entriesStack.push(insert(last(entriesStack), padArmHolder));
+
+	const sketchArmHolder = createEntry(entryType.SKETCH, "Sketch Arm Holder", false)
+	entriesStack.push(insert(last(entriesStack), sketchArmHolder, sketchParentAt(padArmHolder.id)))
+
+	const linearArmHolder = createEntry(entryType.LINEAR, "Linear Pattern Arm Holder", false)
+	entriesStack.push(insert(last(entriesStack), linearArmHolder));
+
+	return last(entriesStack);
+}
+
+partBase.entries = runTransactions(partBase.entries, [partBaseTransaction])
+
+documents.push(partBase);
 
 // BOOM
-parts.push(newPart('Boom', await thumbnail('Boom')));
+documents.push(newDocument(documentType.PART, 'Boom', await thumbnail('Boom')));
 
 // BASE_PIN
-parts.push(newPart('BasePin', await thumbnail('BasePin')));
+documents.push(newDocument(documentType.PART, 'BasePin', await thumbnail('BasePin')));
 
 // STICK
-parts.push(newPart('Stick', await thumbnail('Stick')));
+documents.push(newDocument(documentType.PART, 'Stick', await thumbnail('Stick')));
 
 // BUCKET_LINK_1
-parts.push(newPart('BucketLink1', await thumbnail('BucketLink1')));
+documents.push(newDocument(documentType.PART, 'BucketLink1', await thumbnail('BucketLink1')));
 
 // BUCKET_LINK_2
-parts.push(newPart('BucketLink2', await thumbnail('BucketLink2')));
+documents.push(newDocument(documentType.PART, 'BucketLink2', await thumbnail('BucketLink2')));
 
 // BUCKET
-parts.push(newPart('Bucket', await thumbnail('Bucket')));
+documents.push(newDocument(documentType.PART, 'Bucket', await thumbnail('Bucket')));
 
 // CYLINDERS
-parts.push(newPart('BoomCylinderInner', await thumbnail('Cylinder')));
-parts.push(newPart('StickCylinderInner', await thumbnail('Cylinder')));
-parts.push(newPart('BucketCylinderInner', await thumbnail('Cylinder')));
+documents.push(newDocument(documentType.PART, 'BoomCylinderInner', await thumbnail('Cylinder')));
+documents.push(newDocument(documentType.PART, 'StickCylinderInner', await thumbnail('Cylinder')));
+documents.push(newDocument(documentType.PART, 'BucketCylinderInner', await thumbnail('Cylinder')));
 
-parts.push(newPart('BoomCylinderInner', await thumbnail('Cylinder')));
-parts.push(newPart('StickCylinderInner', await thumbnail('Cylinder')));
-parts.push(newPart('BucketCylinderInner', await thumbnail('Cylinder')));
+documents.push(newDocument(documentType.PART, 'BoomCylinderInner', await thumbnail('Cylinder')));
+documents.push(newDocument(documentType.PART, 'StickCylinderInner', await thumbnail('Cylinder')));
+documents.push(newDocument(documentType.PART, 'BucketCylinderInner', await thumbnail('Cylinder')));
 
 // ASSEMBLY
-initialProject.documents.push(...parts);
-initialProject.documents.push(newAssembly('Assembly', parts, await thumbnail('Assembly')));
-
-// Temporary features
-const features: Feature[] = [];
-insert(feature(featureType.PAD, 'Pad001'), features);
-insert(feature(featureType.SKETCH, 'Sketch001'), seek(features).children);
-insert(feature(featureType.REVOLVE, 'Revolve001'), features);
-insert(feature(featureType.SKETCH, 'Sketch002'), seek(features).children);
+initialProject.documents.push(...documents);
+initialProject.documents.push(newDocument(documentType.ASSEMBLY, 'Assembly', await thumbnail('Assembly')));
 
 // External project
 export const project: Project = $state(initialProject);
 
-project.selected = parts[0];
+project.selected = documents[0];

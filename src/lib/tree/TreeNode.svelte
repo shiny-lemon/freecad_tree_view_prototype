@@ -1,13 +1,12 @@
 <script lang="ts">
-	import { ChevronDown, ChevronRight, Eye, EyeOff, CircleAlert } from '@lucide/svelte';
+	import { ChevronDown, ChevronRight, CircleAlert } from '@lucide/svelte';
 	import TreeNode from './TreeNode.svelte';
 	import IconToggle from '$lib/IconToggle.svelte';
 	import type { DragEventHandler } from 'svelte/elements';
-	import { isEntryWithChildren, type Entry } from '../project/entry.ts';
+	import { entryTypeIcon, type Entry } from '../project/entry.ts';
 	import { addLookup, findEntry } from './position.svelte.ts';
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
-	import { featureIcon } from '$lib/project/feature';
 
 	interface Props {
 		entry: Entry;
@@ -50,10 +49,10 @@
 	{@attach (element) => addLookup(element, entry)}
 >
 	<span>
-		<IconToggle Unchecked={ChevronRight} Checked={ChevronDown} bind:checked={showChildren} />
-		{#await featureIcon(entry.type) then icon}
-			<img class="tool-icon" src={icon} alt="" />
-		{/await}
+		{#if entry.children !== null}
+			<IconToggle Unchecked={ChevronRight} Checked={ChevronDown} bind:checked={showChildren} />
+		{/if}
+		<img class="tool-icon" src={entryTypeIcon[entry.type] + '.svg'} alt="" />
 
 		<!-- TODO Input messes dragging up. Should only be activated with double-click. Hard to do. -->
 		<span
@@ -78,7 +77,7 @@
 		</div>
 	</span>
 
-	{#if isEntryWithChildren(entry) && showChildren}
+	{#if entry.children !== null && showChildren}
 		<ul class="children" role="group">
 			{#each entry.children as child}
 				<TreeNode entry={child} {index} />

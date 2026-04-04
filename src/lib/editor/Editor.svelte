@@ -26,10 +26,8 @@
 
 	let activeTab: EditorTab = $state(editorTabs.PROPERTIES);
 	const oninput: FormEventHandler<HTMLElement> = (event) => {
-		console.log(event);
 		activeTab = (event.target as HTMLElement)?.id as EditorTab;
 	};
-	$inspect(activeTab);
 
 	const flyParams = { x: 200, duration: 180 } satisfies FlyParams;
 </script>

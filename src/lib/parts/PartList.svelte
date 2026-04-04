@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { Plus } from '@lucide/svelte';
 	import Part from './Part.svelte';
-	import { documentIcon, documentType, displayType, type Document } from '$lib/project/document';
+	import {
+		documentIcon,
+		documentType,
+		documentTypeDisplayName,
+		type Document
+	} from '$lib/project/document';
 	import { project } from '$lib/data/data.svelte';
 
 	interface Props {
@@ -26,7 +31,7 @@
 						<li>
 							<button class="part-option">
 								<img {src} alt="" />
-								{displayType(type)}
+								{documentTypeDisplayName[type]}
 							</button>
 						</li>
 					{/await}
