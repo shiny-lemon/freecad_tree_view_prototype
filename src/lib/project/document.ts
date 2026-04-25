@@ -1,4 +1,35 @@
-import { type Entry, } from './entry.ts';
+import { entryCategory, entryTypeCategory, type Entry, type EntryCategory, type EntryId, type EntryType, } from './entry.ts';
+import { type Range } from "./"
+
+export interface Document {
+	id: DocumentId;
+	name: string;
+	type: DocumentType;
+	thumbnail: string | null;
+	entries: Entry[];
+
+	// State
+	focus: Range<EntryId> | null,
+	lastHoveredWhileDragging: EntryId | null,
+	pinned: boolean,
+}
+
+export type DocumentId = string;
+
+export const newDocument = (type: DocumentType, name: string, thumbnail?: string): Document => {
+	const document: Document = {
+		id: crypto.randomUUID(),
+		name,
+		type,
+		thumbnail: thumbnail ?? null,
+		entries: [],
+		focus: null,
+		lastHoveredWhileDragging: null,
+		pinned: false,
+	};
+
+	return document;
+};
 
 export const documentType = {
 	PART: 'part',
@@ -8,6 +39,7 @@ export const documentType = {
 	TECH_DRAW: 'tech-draw',
 	VAR_SET: 'var-set'
 } as const;
+export type DocumentType = (typeof documentType)[keyof typeof documentType];
 
 export const documentTypeDisplayName = {
 	[documentType.PART]: "Part",
@@ -27,48 +59,30 @@ export const documentTypeWorkbenches: Record<DocumentType, string[]> = {
 	[documentType.VAR_SET]: []
 } as const;
 
-export type DocumentType = (typeof documentType)[keyof typeof documentType];
+const workbenchPath = "src/lib/assets/tools/workbench/" as const;
+export const documentTypeIcon = {
+	[documentType.PART]: workbenchPath + "part-design",
+	[documentType.ASSEMBLY]: workbenchPath + "assembly",
+	[documentType.BIM]: workbenchPath + "bim",
+	[documentType.CAM]: workbenchPath + "cam",
+	[documentType.TECH_DRAW]: workbenchPath + "tech-draw",
+	[documentType.VAR_SET]: workbenchPath + "var-set",
 
-type FilterPredicate<T> = (value: T, index: number, array: T[]) => unknown;
+} as const satisfies Record<DocumentType, string>
 
-type EntriesFunction = (filterType?: unknown) => Entry[];
+export const documentTypeEntryCategory: Record<DocumentType, EntryCategory[]> = {
+	[documentType.PART]: [entryCategory.SKETCH, entryCategory.MODELLING, entryCategory.PATTERN, entryCategory.DRESS_UP],
+	[documentType.ASSEMBLY]: [entryCategory.BODY, entryCategory.JOINT_BASIC, entryCategory.JOINT_FACE, entryCategory.JOINT_ADVANCED],
+	[documentType.BIM]: [],
+	[documentType.CAM]: [],
+	[documentType.TECH_DRAW]: [],
+	[documentType.VAR_SET]: [],
+} as const;
 
-export interface Document {
-	id: string;
-	name: string;
-	type: DocumentType;
-	thumbnail: string | null;
-	entries: Entry[];
+export const documentTools = (selectedDocument: DocumentType): EntryType[] => {
+	const availableCategories = documentTypeEntryCategory[selectedDocument];
+
+	const availableEntries = Object.entries(entryTypeCategory).filter(([_entry, category]) => availableCategories.includes(category))
+	return availableEntries.map(([entry, _category]) => entry as EntryType)
 }
 
-export const newDocument = (type: DocumentType, name: string, thumbnail?: string): Document => {
-	const document: Document = {
-		id: crypto.randomUUID(),
-		name,
-		type,
-		thumbnail: thumbnail ?? null,
-		entries: []
-	};
-
-	return document;
-};
-
-export const documentIcon = async (type: DocumentType): Promise<string> => {
-	switch (type) {
-		case documentType.PART:
-			return (await import("$lib/assets/tools/workbench/partdesign.svg")).default;
-		case documentType.ASSEMBLY:
-			return (await import("$lib/assets/tools/workbench/assembly.svg")).default
-		case documentType.BIM:
-			return (await import("$lib/assets/tools/workbench/bim.svg")).default
-		case documentType.CAM:
-			return (await import("$lib/assets/tools/workbench/cam.svg")).default
-		case documentType.TECH_DRAW:
-			return (await import("$lib/assets/tools/workbench/tech-draw.svg")).default
-		case documentType.VAR_SET:
-			return (await import("$lib/assets/tools/workbench/var-set.svg")).default
-		default:
-			const unhandledType: never = type;
-			throw new Error(`Unhandled type case: ${unhandledType}`);
-	}
-};

@@ -2,10 +2,12 @@
 	import { Plus } from '@lucide/svelte';
 	import Part from './Part.svelte';
 	import {
-		documentIcon,
 		documentType,
 		documentTypeDisplayName,
-		type Document
+		documentTypeIcon,
+		newDocument,
+		type Document,
+		type DocumentType
 	} from '$lib/project/document';
 	import { project } from '$lib/data/data.svelte';
 
@@ -14,9 +16,24 @@
 	}
 
 	const { items }: Props = $props();
+
+	const onnewdocument = (givenType: DocumentType) => {
+		// Name should probably be undefined (type not string)
+		const document = newDocument(givenType, `Unnamed ${givenType}`);
+		project.documents.push(document);
+	};
 </script>
 
 <div class="part-list">
+	{#each items.filter(({ pinned }) => pinned) as item}
+		<Part
+			name={item.name}
+			image={item.thumbnail}
+			documentIcon={documentTypeIcon[item.type] + '.svg'}
+			onclick={() => (project.selected = item)}
+		/>
+	{/each}
+
 	<button class="new-part icon" popovertarget="add-part-popover">
 		<Plus />
 	</button>
@@ -27,28 +44,24 @@
 
 			<ol class="new-part-list">
 				{#each Object.values(documentType) as type}
-					{#await documentIcon(type) then src}
-						<li>
-							<button class="part-option">
-								<img {src} alt="" />
-								{documentTypeDisplayName[type]}
-							</button>
-						</li>
-					{/await}
+					<li>
+						<button class="part-option" onclick={() => onnewdocument(type)}>
+							<img src={documentTypeIcon[type] + '.svg'} alt="" />
+							{documentTypeDisplayName[type]}
+						</button>
+					</li>
 				{/each}
 			</ol>
 		</fieldset>
 	</div>
 
-	{#each items as item}
-		{#await documentIcon(item.type) then documentIconSrc}
-			<Part
-				name={item.name}
-				image={item.thumbnail}
-				documentIcon={documentIconSrc}
-				onclick={() => (project.selected = item)}
-			/>
-		{/await}
+	{#each items.filter(({ pinned }) => !pinned) as item}
+		<Part
+			name={item.name}
+			image={item.thumbnail}
+			documentIcon={documentTypeIcon[item.type] + '.svg'}
+			onclick={() => (project.selected = item)}
+		/>
 	{/each}
 </div>
 

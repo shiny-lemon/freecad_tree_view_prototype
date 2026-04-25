@@ -1,8 +1,26 @@
 export interface Entry {
-	id: string;
+	id: EntryId;
 	type: EntryType;
 	name: string;
 	children: Entry[] | null;
+
+	// State
+	showChildren: boolean;
+	issues: Issue[];
+}
+
+export type EntryId = string;
+
+const issueLevel = {
+	LOW: 0,
+	MEDIUM: 1,
+	HIGH: 2,
+}
+type IssueLevel = typeof issueLevel[keyof typeof issueLevel]
+
+interface Issue {
+	level: IssueLevel,
+	message: string,
 }
 
 export const createEntry = (type: EntryType, name: string, allowChildren = true): Entry => {
@@ -10,7 +28,10 @@ export const createEntry = (type: EntryType, name: string, allowChildren = true)
 		id: crypto.randomUUID(),
 		type,
 		name,
-		children: allowChildren ? [] : null
+		children: allowChildren ? [] : null,
+
+		showChildren: false,
+		issues: [],
 	}
 }
 
@@ -22,10 +43,11 @@ export const positionRelation = {
 	BEFORE: "before",
 	AFTER: "after",
 } as const;
+export type PositionRelation = typeof positionRelation[keyof typeof positionRelation]
 
 export interface Position {
-	pathIds: string[];
-	relation: typeof positionRelation[keyof typeof positionRelation];
+	pathIds: EntryId[];
+	relation: PositionRelation;
 	in: boolean;
 }
 
@@ -66,7 +88,7 @@ export const insert = (entries: Entry[],
 	})
 }
 
-const findRecursiveAndRemove = (entries: Entry[], pathIds: string[]): { entry: Entry, remaining: Entry[] } => {
+const findRecursiveAndRemove = (entries: Entry[], pathIds: EntryId[]): { entry: Entry, remaining: Entry[] } => {
 	const [pathId, ...pathIdsRemaining] = pathIds;
 
 	if (pathIds.length === 1) {
@@ -98,7 +120,7 @@ const findRecursiveAndRemove = (entries: Entry[], pathIds: string[]): { entry: E
 	return { entry: nextRecursive.entry, remaining }
 }
 
-export const move = (entries: Entry[], pathIds: string[], to: Position) => {
+export const move = (entries: Entry[], pathIds: EntryId[], to: Position) => {
 	const { entry, remaining } = findRecursiveAndRemove(entries, pathIds);
 
 	return insert(remaining, entry, to);
@@ -111,7 +133,7 @@ export const entryType = {
 	POCKET: 'pocket',
 
 	LINEAR: 'linear',
-	RADIAL: 'radial',
+	POLAR: 'polar',
 
 	FILLET: 'fillet',
 	CHAMFER: 'chamfer',
@@ -136,44 +158,44 @@ export const entryType = {
 
 	FOLDER: "folder",
 } as const;
-type EntryType = typeof entryType[keyof typeof entryType]
+export type EntryType = typeof entryType[keyof typeof entryType]
 
-const toolsPath = "src/lib/assets/tools/" as const;
+const toolPath = "src/lib/assets/tools/" as const;
 export const entryTypeIcon = {
-	[entryType.SKETCH]: toolsPath + "part-design/new-sketch",
+	[entryType.SKETCH]: toolPath + "part-design/new-sketch",
 
-	[entryType.PAD]: toolsPath + "part-design/pad",
-	[entryType.POCKET]: toolsPath + "part-design/pocket",
+	[entryType.PAD]: toolPath + "part-design/pad",
+	[entryType.POCKET]: toolPath + "part-design/pocket",
 
-	[entryType.LINEAR]: toolsPath + "part-design/linear-pattern",
-	[entryType.RADIAL]: toolsPath + "part-design/",
+	[entryType.LINEAR]: toolPath + "part-design/linear-pattern",
+	[entryType.POLAR]: toolPath + "part-design/polar-pattern",
 
-	[entryType.FILLET]: toolsPath + "part-design/fillet",
-	[entryType.CHAMFER]: toolsPath + "part-design/chamfer",
+	[entryType.FILLET]: toolPath + "part-design/fillet",
+	[entryType.CHAMFER]: toolPath + "part-design/chamfer",
 
-	[entryType.FIXED]: toolsPath + "assembly/",
-	[entryType.REVOLUTE]: toolsPath + "assembly/",
-	[entryType.CYLINDRICAL]: toolsPath + "assembly/",
-	[entryType.SLIDER]: toolsPath + "assembly/",
-	[entryType.BALL]: toolsPath + "assembly/",
+	[entryType.FIXED]: toolPath + "assembly/fixed-joint",
+	[entryType.REVOLUTE]: toolPath + "assembly/revolute-joint",
+	[entryType.CYLINDRICAL]: toolPath + "assembly/cylindrical-joint",
+	[entryType.SLIDER]: toolPath + "assembly/slider-joint",
+	[entryType.BALL]: toolPath + "assembly/ball-joint",
 
-	[entryType.DISTANCE]: toolsPath + "assembly/",
-	[entryType.PARALLEL]: toolsPath + "assembly/",
-	[entryType.PERPENDICULAR]: toolsPath + "assembly/",
-	[entryType.ANGLE]: toolsPath + "assembly/",
+	[entryType.DISTANCE]: toolPath + "assembly/distance-joint",
+	[entryType.PARALLEL]: toolPath + "assembly/parallel-joint",
+	[entryType.PERPENDICULAR]: toolPath + "assembly/perpendicular-joint",
+	[entryType.ANGLE]: toolPath + "assembly/angle-joint",
 
-	[entryType.RACK_AND_PINION]: toolsPath + "assembly/",
-	[entryType.SCREW]: toolsPath + "assembly/",
-	[entryType.GEARS]: toolsPath + "assembly/",
-	[entryType.BELT]: toolsPath + "assembly/",
+	[entryType.RACK_AND_PINION]: toolPath + "assembly/rack-pinion-joint",
+	[entryType.SCREW]: toolPath + "assembly/screw-joint",
+	[entryType.GEARS]: toolPath + "assembly/gears-joint",
+	[entryType.BELT]: toolPath + "assembly/belt-joint",
 
-	[entryType.BODY]: toolsPath + "part-design/body",
+	[entryType.BODY]: toolPath + "part-design/body",
 
-	[entryType.FOLDER]: toolsPath + "std/group",
+	[entryType.FOLDER]: toolPath + "std/group",
 
 } as const satisfies Record<EntryType, string>
 
-const entryCategory = {
+export const entryCategory = {
 	SKETCH: "sketch",
 	MODELLING: "modelling",
 	PATTERN: "pattern",
@@ -186,14 +208,14 @@ const entryCategory = {
 } as const;
 export type EntryCategory = typeof entryCategory[keyof typeof entryCategory]
 
-export const entryTypeCategory = {
+export const entryTypeCategory: Record<EntryType, EntryCategory> = {
 	[entryType.SKETCH]: entryCategory.SKETCH,
 
 	[entryType.PAD]: entryCategory.MODELLING,
 	[entryType.POCKET]: entryCategory.MODELLING,
 
 	[entryType.LINEAR]: entryCategory.PATTERN,
-	[entryType.RADIAL]: entryCategory.PATTERN,
+	[entryType.POLAR]: entryCategory.PATTERN,
 
 	[entryType.FILLET]: entryCategory.DRESS_UP,
 	[entryType.CHAMFER]: entryCategory.DRESS_UP,
@@ -217,7 +239,7 @@ export const entryTypeCategory = {
 	[entryType.BODY]: entryCategory.BODY,
 
 	[entryType.FOLDER]: entryCategory.NO_CATEGORY,
-} satisfies Record<EntryType, EntryCategory>;
+} as const;
 
 export const entryCategoryDisplayName = {
 	[entryCategory.SKETCH]: "Sketches",

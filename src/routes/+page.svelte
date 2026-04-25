@@ -2,54 +2,56 @@
 	import { project } from '$lib/data/data.svelte';
 	import Editor from '$lib/editor/Editor.svelte';
 	import PartList from '$lib/parts/PartList.svelte';
-	import { documentTypeDisplayName, documentTypeWorkbenches } from '$lib/project/document';
+	import {
+		documentTypeDisplayName,
+		documentTypeWorkbenches,
+		documentType,
+		documentTools,
+		type Document
+	} from '$lib/project/document';
 	import Tree from '$lib/tree/Tree.svelte';
 	import { fly } from 'svelte/transition';
 	import Workbenches from '../lib/Workbenches.svelte';
+	import { dev } from '$app/environment';
+	import { entryTypeIcon } from '$lib/project/entry';
 
 	// Std
 	import coordinateSystem from '$lib/assets/tools/std/coordinate-system.svg';
 	import group from '$lib/assets/tools/std/group.svg';
 	import linkMake from '$lib/assets/tools/std/link-make.svg';
 
-	// Part design
-	import body from '$lib/assets/tools/part-design/body.svg';
-	import newSketch from '$lib/assets/tools/part-design/new-sketch.svg';
-	import pad from '$lib/assets/tools/part-design/pad.svg';
-	import revolution from '$lib/assets/tools/part-design/revolution.svg';
-	import additiveLoft from '$lib/assets/tools/part-design/additive-loft.svg';
-	import additivePipe from '$lib/assets/tools/part-design/additive-pipe.svg';
-	import pocket from '$lib/assets/tools/part-design/pocket.svg';
-	import hole from '$lib/assets/tools/part-design/hole.svg';
-	import groove from '$lib/assets/tools/part-design/groove.svg';
-	import subtractiveLoft from '$lib/assets/tools/part-design/subtractive-loft.svg';
-	import subtractivePipe from '$lib/assets/tools/part-design/subtractive-pipe.svg';
-	import fillet from '$lib/assets/tools/part-design/fillet.svg';
-	import chamfer from '$lib/assets/tools/part-design/chamfer.svg';
-	import mirrored from '$lib/assets/tools/part-design/mirrored.svg';
-	import linearPattern from '$lib/assets/tools/part-design/linear-pattern.svg';
-
-	const documentType = $derived(project.selected?.type);
+	const selectedDocumentType = $derived(project.selected?.type || documentType.PART);
 </script>
 
-<dialog open>
-	<form method="dialog">
-		<h1>Hello!</h1>
-		<p>Explanation thing!</p>
-		<button>Sure!</button>
-	</form>
-</dialog>
+{#if !dev}
+	<dialog {@attach (dialog) => dialog.showModal()}>
+		<form method="dialog">
+			<h1>Hello!</h1>
+			<p>
+				This is a cool prototype. You can read more <a
+					href="https://github.com/shiny-lemon/freecad_tree_view_prototype"
+					target="_blank"
+					tabindex="-1">on GitHub</a
+				>.
+			</p>
+			<p>You are always welcome (and encouraged!) to leave feedback on Discord.</p>
+			<button>Sure!</button>
+		</form>
+	</dialog>
+{:else}
+	{console.info('In dev environment. Skipping intro dialog.')}
+{/if}
 
 <div class="app">
 	<header>
 		<div class="workbenches-container">
-			{#if documentType}
-				{#key documentType}
+			{#if selectedDocumentType}
+				{#key selectedDocumentType}
 					<div class="workbenches" transition:fly={{ y: 48 }}>
 						<h2 class="document-type">
-							{documentTypeDisplayName[documentType]}
+							{documentTypeDisplayName[selectedDocumentType]}
 						</h2>
-						<Workbenches names={documentTypeWorkbenches[documentType]} />
+						<Workbenches names={documentTypeWorkbenches[selectedDocumentType]} />
 					</div>
 				{/key}
 			{/if}
@@ -61,28 +63,18 @@
 				<button class="icon"> <img src={linkMake} alt="" /></button>
 			</div>
 			<div class="workbench">
-				<button class="icon"> <img src={body} alt="" /></button>
-				<button class="icon"> <img src={newSketch} alt="" /></button>
-				<button class="icon"> <img src={pad} alt="" /></button>
-				<button class="icon"> <img src={revolution} alt="" /></button>
-				<button class="icon"> <img src={additiveLoft} alt="" /></button>
-				<button class="icon"> <img src={additivePipe} alt="" /></button>
-				<button class="icon"> <img src={pocket} alt="" /></button>
-				<button class="icon"> <img src={hole} alt="" /></button>
-				<button class="icon"> <img src={groove} alt="" /></button>
-				<button class="icon"> <img src={subtractiveLoft} alt="" /></button>
-				<button class="icon"> <img src={subtractivePipe} alt="" /></button>
-				<button class="icon"> <img src={fillet} alt="" /></button>
-				<button class="icon"> <img src={chamfer} alt="" /></button>
-				<button class="icon"> <img src={mirrored} alt="" /></button>
-				<button class="icon"> <img src={linearPattern} alt="" /></button>
+				{#each documentTools(selectedDocumentType) as tool}
+					<button class="icon"> <img src={entryTypeIcon[tool] + '.svg'} alt="" /></button>
+				{/each}
 			</div>
 		</div>
 	</header>
 	<main>
 		<div class="pane">
-			<PartList items={project.documents} />
-			<Tree entries={project.selected?.entries ?? []} selectedName={project.selected?.name ?? ''} />
+			{#if project.selected !== null}
+				<PartList items={project.documents} />
+				<Tree entries={project.selected?.entries ?? []} selectedDocument={project.selected} />
+			{/if}
 		</div>
 		<Editor positionAnchor="--main-pane" active={true} />
 		<div class="view">
@@ -97,9 +89,9 @@
 </div>
 
 <style>
-	:global(dialog::backdrop) {
-		background-image: linear-gradient(45deg, magenta, rebeccapurple, dodgerblue, green);
-		opacity: 0.75;
+	dialog::backdrop {
+		background-color: var(--surface-0);
+		opacity: 0.65;
 	}
 
 	.app {

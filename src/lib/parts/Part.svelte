@@ -1,8 +1,6 @@
 <script lang="ts">
-	import IconToggle from '$lib/IconToggle.svelte';
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
-	import { Pin, PinOff } from '@lucide/svelte';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	interface Props {
@@ -20,10 +18,6 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="part-item" style:--anchor-name={anchorName} {...fleetingAnchorEvents} tabindex="-1">
-	<div id="pin-popover" popover {@attach fleetingTarget}>
-		<IconToggle Checked={Pin} Unchecked={PinOff} />
-	</div>
-
 	<div id="name-popover" popover="hint" {@attach fleetingTarget}>
 		<span>{name}</span>
 	</div>
@@ -62,17 +56,6 @@
 	.thumbnail.fallback {
 		height: 48px;
 		padding: 12px;
-	}
-
-	#pin-popover {
-		position-anchor: var(--anchor-name);
-		position: absolute;
-		position-area: span-end start;
-		margin-top: -1rem;
-
-		height: 24px;
-		border-radius: 50%;
-		border: none;
 	}
 
 	#name-popover {
