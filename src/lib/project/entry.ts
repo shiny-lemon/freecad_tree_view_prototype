@@ -245,7 +245,11 @@ export const entryFilter = {
 	"SKETCH": "sketch",
 	"MODELLING": "modelling",
 	"PATTERN": "pattern",
-	"DRESS_UP": "dress_up",
+	"DRESS_UP": "dress-up",
+	"JOINT_BASIC": "joint-basic",
+	"JOINT_FACE": "joint-face",
+	"JOINT_ADVANCED": "joint-advanced",
+	"BODY": "body",
 	"ISSUE": "issue",
 } as const
 export type EntryFilter = typeof entryFilter[keyof typeof entryFilter]
@@ -254,18 +258,32 @@ export type FilterFunction = (entry: Entry) => boolean
 
 export const entryFilterFunction: Record<EntryFilter, FilterFunction> = {
 	[entryFilter.ALL]: (_entry) => true,
+
 	[entryFilter.SKETCH]: ({ type }) => entryTypeCategory[type] === entryCategory.SKETCH,
 	[entryFilter.MODELLING]: ({ type }) => entryTypeCategory[type] === entryCategory.MODELLING,
 	[entryFilter.PATTERN]: ({ type }) => entryTypeCategory[type] === entryCategory.PATTERN,
 	[entryFilter.DRESS_UP]: ({ type }) => entryTypeCategory[type] === entryCategory.DRESS_UP,
+
+	[entryFilter.JOINT_BASIC]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_BASIC,
+	[entryFilter.JOINT_FACE]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_FACE,
+	[entryFilter.JOINT_ADVANCED]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_ADVANCED,
+	[entryFilter.BODY]: ({ type }) => entryTypeCategory[type] === entryCategory.DRESS_UP,
+
 	[entryFilter.ISSUE]: ({ issues }) => issues.length > 0,
 } as const
 
-export const entryFilterDisplayName = {
+export const entryFilterDisplayName: Record<EntryFilter, string> = {
 	[entryFilter.ALL]: "All",
+
 	[entryFilter.SKETCH]: entryCategoryDisplayName[entryCategory.SKETCH],
 	[entryFilter.MODELLING]: entryCategoryDisplayName[entryCategory.MODELLING],
 	[entryFilter.PATTERN]: entryCategoryDisplayName[entryCategory.PATTERN],
 	[entryFilter.DRESS_UP]: entryCategoryDisplayName[entryCategory.DRESS_UP],
+
+	[entryFilter.JOINT_BASIC]: entryCategoryDisplayName[entryCategory.JOINT_BASIC],
+	[entryFilter.JOINT_FACE]: entryCategoryDisplayName[entryCategory.JOINT_FACE],
+	[entryFilter.JOINT_ADVANCED]: entryCategoryDisplayName[entryCategory.JOINT_ADVANCED],
+	[entryFilter.BODY]: entryCategoryDisplayName[entryCategory.BODY],
+
 	[entryFilter.ISSUE]: "Issues",
 } as const

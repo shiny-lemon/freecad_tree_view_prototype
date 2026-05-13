@@ -1,4 +1,4 @@
-import { entryFilter, entryFilterFunction, entryTypeCategory, type Entry, type EntryFilter, type EntryId, type EntryType, type FilterFunction, } from './entry.ts';
+import { entryCategory, entryFilter, entryFilterFunction, entryTypeCategory, type Entry, type EntryCategory, type EntryFilter, type EntryId, type EntryType, type FilterFunction, } from './entry.ts';
 import { type Range } from "./"
 import { getEntry } from './project.ts';
 import { newDragState, type DragState } from './drag.ts';
@@ -125,17 +125,29 @@ export const documentTypeIcon = {
 
 export const documentTypeEntryFilter: Record<DocumentType, EntryFilter[]> = {
 	[documentType.PART]: [entryFilter.ALL, entryFilter.SKETCH, entryFilter.MODELLING, entryFilter.PATTERN, entryFilter.DRESS_UP, entryFilter.ISSUE],
-	[documentType.ASSEMBLY]: [], // entryCategory.BODY, entryCategory.JOINT_BASIC, entryCategory.JOINT_FACE, entryCategory.JOINT_ADVANCED
+	[documentType.ASSEMBLY]: [entryFilter.ALL, entryFilter.BODY, entryFilter.JOINT_BASIC, entryFilter.JOINT_FACE, entryFilter.JOINT_ADVANCED, entryFilter.ISSUE],
 	[documentType.BIM]: [],
 	[documentType.CAM]: [],
 	[documentType.TECH_DRAW]: [],
 	[documentType.VAR_SET]: [],
 } as const;
 
-export const documentTools = (selectedDocument: DocumentType): EntryType[] => {
-	const availableCategories = documentTypeEntryFilter[selectedDocument];
+export const documentTypeEntryCategory: Record<DocumentType, EntryCategory[]> = {
+	[documentType.PART]: [entryCategory.SKETCH, entryCategory.MODELLING, entryCategory.PATTERN, entryCategory.DRESS_UP],
+	[documentType.ASSEMBLY]: [entryCategory.BODY, entryCategory.JOINT_BASIC, entryCategory.JOINT_FACE, entryCategory.JOINT_ADVANCED],
+	[documentType.BIM]: [],
+	[documentType.CAM]: [],
+	[documentType.TECH_DRAW]: [],
+	[documentType.VAR_SET]: [],
+}
 
-	const availableEntries = Object.entries(entryTypeCategory).filter(([_entry, category]) => availableCategories.includes(category))
-	return availableEntries.map(([entry, _category]) => entry as EntryType)
+export const documentTools = (selectedDocument: DocumentType): EntryType[] => {
+	const availableCategories = documentTypeEntryCategory[selectedDocument];
+
+	const availableEntryTypeCategories = Object.entries(entryTypeCategory).filter(([_, category]) => availableCategories.includes(category))
+
+	const availableEntryTypes = availableEntryTypeCategories.map(([entry, _category]) => entry as EntryType)
+
+	return availableEntryTypes
 }
 
