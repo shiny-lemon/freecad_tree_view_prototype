@@ -23,7 +23,7 @@ interface Issue {
 	message: string,
 }
 
-export const createEntry = (type: EntryType, name: string, allowChildren = true): Entry => {
+export const createEntry = (type: EntryType, name: string, allowChildren = false): Entry => {
 	return {
 		id: crypto.randomUUID(),
 		type,
@@ -46,86 +46,73 @@ export const positionRelation = {
 export type PositionRelation = typeof positionRelation[keyof typeof positionRelation]
 
 export interface Position {
-	pathIds: EntryId[];
+	id: EntryId | null;
 	relation: PositionRelation;
 	in: boolean;
 }
 
 export const insert = (entries: Entry[],
 	entry: Entry,
-	at: Position = { pathIds: [], relation: positionRelation.AFTER, in: false }
+	at: Position = { id: null, relation: positionRelation.AFTER, in: false }
 ): Entry[] => {
-	const [pathId, ...pathIdsRemaining] = at.pathIds;
 
-	if (at.in && at.pathIds.length === 0) throw new Error("Cannot insert into entry when no pathId is specified.")
+	if (at.in && at.id === null) throw new Error("Cannot insert into entry when no id is specified.")
 
-	if (at.pathIds.length === 0) {
-		const pathIndex = at.relation === positionRelation.AFTER ? entries.length : 0;
+	if (entries.length === 0) return [entry]
 
-		return entries.toSpliced(pathIndex, 0, entry);
-	}
+	return traverse(entries, (previous, current) => {
+		const insertNextTo = !at.in && current.id === at.id
+		if (at.relation === positionRelation.BEFORE && insertNextTo) return [...previous, entry, current];
+		if (at.relation === positionRelation.AFTER && insertNextTo || at.id === null) return [...previous, current, entry];
 
-	if (!at.in && at.pathIds.length === 1) {
-		const pathIndex = entries.findIndex((value) => value.id === pathId);
+		if (at.in && current.id === at.id) {
+			const inPosition = { in: false, id: null, relation: at.relation }
+			current.children = insert(current.children || [], entry, inPosition);
+		}
 
-		const afterOffset = at.relation === positionRelation.AFTER ? 1 : 0;
-
-		return entries.toSpliced(pathIndex + afterOffset, 0, entry);
-	}
-
-	if (!entries.some((value) => value.id === pathId)) throw new Error(`Given pathId: ${pathId} is invalid`);
-	return entries.map((value) => {
-		if (value.id !== pathId) return value;
-
-		if (value.children === null) throw new Error(`Cannot insert into entry with type ${value.type} which does not allow children.`);
-
-		const nextIn = pathIdsRemaining.length === 0 ? false : at.in
-		const nextAt = { pathIds: pathIdsRemaining, relation: at.relation, in: nextIn }
-
-		value.children = insert(value.children, entry, nextAt);
-
-		return value
+		return [...previous, current]
 	})
 }
 
-const findRecursiveAndRemove = (entries: Entry[], pathIds: EntryId[]): { entry: Entry, remaining: Entry[] } => {
-	const [pathId, ...pathIdsRemaining] = pathIds;
-
-	if (pathIds.length === 1) {
-		const foundEntryIndex = entries.findIndex((value) => value.id === pathId);
-
-		if (foundEntryIndex === -1) throw new Error(`Cannot find entry with ${pathIds} in entries.`)
-
-		const remainingEntries = entries.toSpliced(foundEntryIndex, 1);
-		const finalEntry = entries.at(foundEntryIndex) as Entry;
-
-		return { entry: finalEntry, remaining: remainingEntries }
-
-	};
-
-	const nextEntryIndex = entries.findIndex((value) => value.id === pathId);
-
-	if (nextEntryIndex === -1) throw new Error(`Given pathId: ${pathId} is invalid`);
-
-	// Array.slice(...) apparently does not do deep-copy. This seems a bit like a hack, but it works!
-	const nextEntry = structuredClone(entries.at(nextEntryIndex) as Entry);
-
-	if (nextEntry.children === null) throw new Error(`Cannot insert into entry with type ${nextEntry.type} which does not allow children.`);
-
-	const nextRecursive = findRecursiveAndRemove(nextEntry.children, pathIdsRemaining);
-
-	nextEntry.children = nextRecursive.remaining // <--- TODO Remove mutation so structuredClone is not needed.
-
-	const remaining = entries.toSpliced(nextEntryIndex, 1, nextEntry)
-	return { entry: nextRecursive.entry, remaining }
+const find = (entries: Entry[], id: EntryId): Entry => {
+	const result = flatten(entries).find((entry) => entry.id === id)
+	if (result === undefined) throw new Error(`Could not find entry with id ${id}`);
+	return result;
 }
 
-export const move = (entries: Entry[], pathIds: EntryId[], to: Position) => {
-	const { entry, remaining } = findRecursiveAndRemove(entries, pathIds);
+const remove = (entries: Entry[], id: EntryId): Entry[] => {
+	return traverse(entries, (previous, current) => {
+		if (current.id === id) return previous
 
-	return insert(remaining, entry, to);
+		if (current.children !== null) {
+			current.children = remove(current.children, id)
+		}
+
+		return [...previous, current]
+	})
 }
 
+export const move = (entries: Entry[], id: EntryId, to: Position) => {
+	const entry = find(entries, id)
+	const remainingEntries = remove(entries, id);
+
+	return insert(remainingEntries, entry, to);
+}
+
+export const traverse = (entries: Entry[], callbackfn: (previousValue: Entry[], currentValue: Entry, currentIndex: number, array: Entry[]) => Entry[]): Entry[] => {
+	return entries.reduce<Entry[]>((previousValue, currentValue, currentIndex, array) => {
+		return callbackfn(previousValue, currentValue, currentIndex, array)
+	}, [])
+}
+
+export const flatten = (entries: Entry[]): Entry[] => {
+	return traverse(entries, (previous, current) => {
+		const currentEntries = flatten(current.children || []);
+		return [...previous, current, ...currentEntries];
+	})
+}
+
+// Enums
 export const entryType = {
 	SKETCH: "sketch",
 
@@ -252,3 +239,33 @@ export const entryCategoryDisplayName = {
 	[entryCategory.BODY]: "Bodies",
 	[entryCategory.NO_CATEGORY]: null,
 } as const satisfies Record<EntryCategory, string | null>
+
+export const entryFilter = {
+	"ALL": "all",
+	"SKETCH": "sketch",
+	"MODELLING": "modelling",
+	"PATTERN": "pattern",
+	"DRESS_UP": "dress_up",
+	"ISSUE": "issue",
+} as const
+export type EntryFilter = typeof entryFilter[keyof typeof entryFilter]
+
+export type FilterFunction = (entry: Entry) => boolean
+
+export const entryFilterFunction: Record<EntryFilter, FilterFunction> = {
+	[entryFilter.ALL]: (_entry) => true,
+	[entryFilter.SKETCH]: ({ type }) => entryTypeCategory[type] === entryCategory.SKETCH,
+	[entryFilter.MODELLING]: ({ type }) => entryTypeCategory[type] === entryCategory.MODELLING,
+	[entryFilter.PATTERN]: ({ type }) => entryTypeCategory[type] === entryCategory.PATTERN,
+	[entryFilter.DRESS_UP]: ({ type }) => entryTypeCategory[type] === entryCategory.DRESS_UP,
+	[entryFilter.ISSUE]: ({ issues }) => issues.length > 0,
+} as const
+
+export const entryFilterDisplayName = {
+	[entryFilter.ALL]: "All",
+	[entryFilter.SKETCH]: entryCategoryDisplayName[entryCategory.SKETCH],
+	[entryFilter.MODELLING]: entryCategoryDisplayName[entryCategory.MODELLING],
+	[entryFilter.PATTERN]: entryCategoryDisplayName[entryCategory.PATTERN],
+	[entryFilter.DRESS_UP]: entryCategoryDisplayName[entryCategory.DRESS_UP],
+	[entryFilter.ISSUE]: "Issues",
+} as const

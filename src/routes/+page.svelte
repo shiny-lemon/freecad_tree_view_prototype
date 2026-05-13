@@ -1,13 +1,12 @@
 <script lang="ts">
-	import { project } from '$lib/data/data.svelte';
+	import { getDocuments, getSelected } from '$lib/data/data.svelte';
 	import Editor from '$lib/editor/Editor.svelte';
 	import PartList from '$lib/parts/PartList.svelte';
 	import {
 		documentTypeDisplayName,
 		documentTypeWorkbenches,
-		documentType,
 		documentTools,
-		type Document
+		getFocusedEntries
 	} from '$lib/project/document';
 	import Tree from '$lib/tree/Tree.svelte';
 	import { fly } from 'svelte/transition';
@@ -20,7 +19,7 @@
 	import group from '$lib/assets/tools/std/group.svg';
 	import linkMake from '$lib/assets/tools/std/link-make.svg';
 
-	const selectedDocumentType = $derived(project.selected?.type || documentType.PART);
+	const selectedDocumentType = $derived(getSelected().type);
 </script>
 
 {#if !dev}
@@ -71,12 +70,10 @@
 	</header>
 	<main>
 		<div class="pane">
-			{#if project.selected !== null}
-				<PartList items={project.documents} />
-				<Tree entries={project.selected?.entries ?? []} selectedDocument={project.selected} />
-			{/if}
+			<PartList items={getDocuments()} />
+			<Tree entries={getSelected().entries} selectedDocument={getSelected()} />
 		</div>
-		<Editor positionAnchor="--main-pane" active={true} />
+		<Editor positionAnchor="--main-pane" selectedEntries={getFocusedEntries(getSelected())} />
 		<div class="view">
 			<span class="info"
 				>FreeCAD Tree View Prototype • <a

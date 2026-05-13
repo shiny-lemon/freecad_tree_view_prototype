@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { IconProps } from '@lucide/svelte';
 	import type { Component } from 'svelte';
-	import type { ChangeEventHandler } from 'svelte/elements';
 
 	interface IconToggleProps {
 		Unchecked: Component;

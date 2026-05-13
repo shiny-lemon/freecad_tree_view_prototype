@@ -4,13 +4,14 @@
 	import { fly, type FlyParams } from 'svelte/transition';
 	import EditorTable from './EditorTable.svelte';
 	import type { FormEventHandler } from 'svelte/elements';
+	import type { Entry } from '$lib/project/entry';
 
 	interface Props {
 		positionAnchor: string;
-		active: boolean;
+		selectedEntries: Entry[];
 	}
 
-	const { positionAnchor, active }: Props = $props();
+	const { positionAnchor, selectedEntries }: Props = $props();
 
 	onMount(() => {
 		if (positionAnchor.slice(0, 2) != '--') {
@@ -24,40 +25,46 @@
 	} as const;
 	type EditorTab = (typeof editorTabs)[keyof typeof editorTabs];
 
-	let activeTab: EditorTab = $state(editorTabs.PROPERTIES);
+	let activeTab: EditorTab = $state(editorTabs.TASK);
 	const oninput: FormEventHandler<HTMLElement> = (event) => {
 		activeTab = (event.target as HTMLElement)?.id as EditorTab;
 	};
 
+	const activeName = $derived.by(() => {
+		if (selectedEntries.length === 1) return selectedEntries[0].name;
+		else return 'Multiple entries selected';
+	});
+
 	const flyParams = { x: 200, duration: 180 } satisfies FlyParams;
 </script>
 
-<div class="editor overlay" style:position-anchor={positionAnchor} hidden={!active}>
-	<ul class="editor-tabs" {oninput}>
-		<li>
-			<label>
-				<input
-					type="radio"
-					name="editor-tab"
-					id={editorTabs.TASK}
-					checked={activeTab === editorTabs.TASK}
-				/>
-				Task
-			</label>
-		</li>
-		<li>
-			<label>
-				<input
-					type="radio"
-					name="editor-tab"
-					id={editorTabs.PROPERTIES}
-					checked={activeTab === editorTabs.PROPERTIES}
-				/>
-				Properties
-			</label>
-		</li>
+{#if selectedEntries.length !== 0}
+	<div class="editor overlay" style:position-anchor={positionAnchor}>
+		<ul class="editor-tabs" {oninput}>
+			<li>
+				<label>
+					<input
+						type="radio"
+						name="editor-tab"
+						id={editorTabs.TASK}
+						checked={activeTab === editorTabs.TASK}
+					/>
+					Task
+				</label>
+			</li>
+			<li>
+				<label>
+					<input
+						type="radio"
+						name="editor-tab"
+						id={editorTabs.PROPERTIES}
+						checked={activeTab === editorTabs.PROPERTIES}
+					/>
+					Properties
+				</label>
+			</li>
 
-		<!-- <button class="tab" class:active-tab={activeTab === 'task'} onclick={() => (activeTab = 'task')}
+			<!-- <button class="tab" class:active-tab={activeTab === 'task'} onclick={() => (activeTab = 'task')}
 			>Task</button
 		>
 		<button
@@ -65,61 +72,62 @@
 			class:active-tab={activeTab === 'properties'}
 			onclick={() => (activeTab = 'properties')}>Properties</button
 		> -->
-	</ul>
+		</ul>
 
-	<div class="top">
-		<h1>Active Feature</h1>
+		<div class="top">
+			<h1>{activeName}</h1>
 
-		<button class="icon">
-			<Trash />
-		</button>
-	</div>
+			<button class="icon">
+				<Trash />
+			</button>
+		</div>
 
-	<div class="page">
-		{#if activeTab === editorTabs.TASK}
-			<div class="task" transition:fly={{ ...flyParams, x: -flyParams.x }}>
-				<fieldset>
-					<div>
-						<label for="mode">Mode</label>
-						<select name="mode" id="mode">
-							<option value="one-sided">One sided</option>
-							<option value="two-sided">Two sided</option>
-						</select>
-					</div>
-
-					<div>
-						<label for="type">Type</label>
-						<select name="type" id="type">
-							<option value="dimension">Dimension</option>
-							<option value="up-to">Up to next</option>
-						</select>
-					</div>
-
-					<div>
-						<label for="length">Length</label>
-						<input type="number" name="length" id="length" />
-					</div>
-
-					<div>
-						<label for="taper">Taper</label>
-						<input type="number" name="taper" id="taper" />
-					</div>
-
-					<div>
+		<div class="page">
+			{#if activeTab === editorTabs.TASK}
+				<div class="task" transition:fly={{ ...flyParams, x: -flyParams.x }}>
+					<fieldset>
 						<div>
-							<input type="checkbox" name="reversed" id="reversed" />
-							<label for="reversed">Reversed</label>
+							<label for="mode">Mode</label>
+							<select name="mode" id="mode">
+								<option value="one-sided">One sided</option>
+								<option value="two-sided">Two sided</option>
+							</select>
 						</div>
-					</div>
-				</fieldset>
-			</div>
-		{:else if activeTab === editorTabs.PROPERTIES}
-			<div class="properties" transition:fly={flyParams}>
-				<EditorTable />
-			</div>
-		{/if}
+
+						<div>
+							<label for="type">Type</label>
+							<select name="type" id="type">
+								<option value="dimension">Dimension</option>
+								<option value="up-to">Up to next</option>
+							</select>
+						</div>
+
+						<div>
+							<label for="length">Length</label>
+							<input type="number" name="length" id="length" />
+						</div>
+
+						<div>
+							<label for="taper">Taper</label>
+							<input type="number" name="taper" id="taper" />
+						</div>
+
+						<div>
+							<div>
+								<input type="checkbox" name="reversed" id="reversed" />
+								<label for="reversed">Reversed</label>
+							</div>
+						</div>
+					</fieldset>
+				</div>
+			{:else if activeTab === editorTabs.PROPERTIES}
+				<div class="properties" transition:fly={flyParams}>
+					<EditorTable />
+				</div>
+			{/if}
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
 	.editor {

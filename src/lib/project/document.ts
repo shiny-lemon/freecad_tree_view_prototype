@@ -1,5 +1,7 @@
-import { entryCategory, entryTypeCategory, type Entry, type EntryCategory, type EntryId, type EntryType, } from './entry.ts';
+import { entryFilter, entryFilterFunction, entryTypeCategory, type Entry, type EntryFilter, type EntryId, type EntryType, type FilterFunction, } from './entry.ts';
 import { type Range } from "./"
+import { getEntry } from './project.ts';
+import { newDragState, type DragState } from './drag.ts';
 
 export interface Document {
 	id: DocumentId;
@@ -10,8 +12,13 @@ export interface Document {
 
 	// State
 	focus: Range<EntryId> | null,
-	lastHoveredWhileDragging: EntryId | null,
 	pinned: boolean,
+	filterFunction: FilterFunction,
+	drag: {
+		entry: DragState<EntryId>
+		tip: DragState<EntryId>
+		part: DragState<DocumentId>
+	}
 }
 
 export type DocumentId = string;
@@ -24,12 +31,58 @@ export const newDocument = (type: DocumentType, name: string, thumbnail?: string
 		thumbnail: thumbnail ?? null,
 		entries: [],
 		focus: null,
-		lastHoveredWhileDragging: null,
 		pinned: false,
+		filterFunction: entryFilterFunction[entryFilter.ALL],
+		drag: {
+			entry: newDragState(),
+			tip: newDragState(),
+			part: newDragState(),
+		}
 	};
 
 	return document;
 };
+
+export const isEntrySelected = (givenId: string, document: Document): boolean => {
+	if (document.focus === null) return false;
+
+	const { anchor: anchorId, focus: focusId } = document.focus;
+
+	const anchorIndex = document.entries.findIndex(({ id }) => id === anchorId);
+	const focusIndex = document.entries.findIndex(({ id }) => id === focusId);
+
+	const givenIndex = document.entries.findIndex(({ id }) => id === givenId);
+
+	return (givenIndex <= focusIndex && givenIndex >= anchorIndex) ||
+		(givenIndex <= anchorIndex && givenIndex >= focusIndex);
+}
+
+export const entrySelectionType = {
+	SELECT: "select",
+	DESELECT: "deselect",
+} as const;
+export type EntrySelectionType = (typeof entrySelectionType)[keyof typeof entrySelectionType];
+
+export const updateFocus = (document: Document, id: EntryId, type: EntrySelectionType): Document => {
+	if (document.focus?.anchor === id && document.focus.focus === id) document.focus = null;
+	else document.focus = { anchor: getEntry(document, id).id, focus: getEntry(document, id).id }
+	return document
+}
+
+export const getFocusedEntries = (document: Document): Entry[] => {
+	if (document.focus === null) return [];
+
+	const { anchor, focus } = document.focus
+
+	const anchorIndex = document.entries.findIndex(({ id }) => id === anchor);
+	const focusIndex = document.entries.findIndex(({ id }) => id === focus);
+
+	if (anchorIndex === focusIndex) return [document.entries[anchorIndex]];
+
+	return document.entries.slice(anchorIndex, focusIndex);
+}
+
+// Enums
 
 export const documentType = {
 	PART: 'part',
@@ -70,9 +123,9 @@ export const documentTypeIcon = {
 
 } as const satisfies Record<DocumentType, string>
 
-export const documentTypeEntryCategory: Record<DocumentType, EntryCategory[]> = {
-	[documentType.PART]: [entryCategory.SKETCH, entryCategory.MODELLING, entryCategory.PATTERN, entryCategory.DRESS_UP],
-	[documentType.ASSEMBLY]: [entryCategory.BODY, entryCategory.JOINT_BASIC, entryCategory.JOINT_FACE, entryCategory.JOINT_ADVANCED],
+export const documentTypeEntryFilter: Record<DocumentType, EntryFilter[]> = {
+	[documentType.PART]: [entryFilter.ALL, entryFilter.SKETCH, entryFilter.MODELLING, entryFilter.PATTERN, entryFilter.DRESS_UP, entryFilter.ISSUE],
+	[documentType.ASSEMBLY]: [], // entryCategory.BODY, entryCategory.JOINT_BASIC, entryCategory.JOINT_FACE, entryCategory.JOINT_ADVANCED
 	[documentType.BIM]: [],
 	[documentType.CAM]: [],
 	[documentType.TECH_DRAW]: [],
@@ -80,7 +133,7 @@ export const documentTypeEntryCategory: Record<DocumentType, EntryCategory[]> = 
 } as const;
 
 export const documentTools = (selectedDocument: DocumentType): EntryType[] => {
-	const availableCategories = documentTypeEntryCategory[selectedDocument];
+	const availableCategories = documentTypeEntryFilter[selectedDocument];
 
 	const availableEntries = Object.entries(entryTypeCategory).filter(([_entry, category]) => availableCategories.includes(category))
 	return availableEntries.map(([entry, _category]) => entry as EntryType)

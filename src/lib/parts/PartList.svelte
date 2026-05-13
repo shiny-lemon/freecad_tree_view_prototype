@@ -7,9 +7,10 @@
 		documentTypeIcon,
 		newDocument,
 		type Document,
+		type DocumentId,
 		type DocumentType
 	} from '$lib/project/document';
-	import { project } from '$lib/data/data.svelte';
+	import { addDocument, focusDocument } from '$lib/data/data.svelte';
 
 	interface Props {
 		items: Document[];
@@ -20,8 +21,10 @@
 	const onnewdocument = (givenType: DocumentType) => {
 		// Name should probably be undefined (type not string)
 		const document = newDocument(givenType, `Unnamed ${givenType}`);
-		project.documents.push(document);
+		addDocument(document);
 	};
+
+	const onpartclick = (id: DocumentId) => focusDocument(id);
 </script>
 
 <div class="part-list">
@@ -30,7 +33,7 @@
 			name={item.name}
 			image={item.thumbnail}
 			documentIcon={documentTypeIcon[item.type] + '.svg'}
-			onclick={() => (project.selected = item)}
+			onclick={() => onpartclick(item.id)}
 		/>
 	{/each}
 
@@ -60,7 +63,7 @@
 			name={item.name}
 			image={item.thumbnail}
 			documentIcon={documentTypeIcon[item.type] + '.svg'}
-			onclick={() => (project.selected = item)}
+			onclick={() => onpartclick(item.id)}
 		/>
 	{/each}
 </div>

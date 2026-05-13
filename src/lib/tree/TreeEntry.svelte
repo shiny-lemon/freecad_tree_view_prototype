@@ -2,71 +2,46 @@
 	import { ChevronDown, ChevronRight, CircleAlert } from '@lucide/svelte';
 	import TreeEntry from './TreeEntry.svelte';
 	import IconToggle from '$lib/IconToggle.svelte';
-	import type { DragEventHandler, EventHandler } from 'svelte/elements';
-	import {
-		entryCategory,
-		entryTypeCategory,
-		entryTypeIcon,
-		move,
-		positionRelation,
-		type Entry
-	} from '../project/entry.ts';
+	import type { KeyboardEventHandler, MouseEventHandler } from 'svelte/elements';
+	import { entryCategory, entryTypeCategory, entryTypeIcon, type Entry } from '../project/entry.ts';
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
-	import type { Transaction } from '$lib/project/transaction';
-	import { addTransaction, project } from '$lib/data/data.svelte';
+	import {
+		getEntryDragState,
+		setDragStart,
+		setDrop,
+		setDragOver,
+		setShowChildren,
+		updateDocumentFocus
+	} from '$lib/data/data.svelte';
+	import {
+		createDragOverHandler,
+		createDragStartHandler,
+		createDropHandler
+	} from '$lib/project/drag';
 
 	interface Props {
 		entry: Entry;
-		draggingOver: boolean;
-		onnodedragenter: DragEventHandler<HTMLElement>;
-		onselectaction?: EventHandler;
 		selected: boolean;
 	}
 
-	let {
-		entry = $bindable(),
-		onnodedragenter,
-		draggingOver,
-		onselectaction,
-		selected
-	}: Props = $props();
+	let { entry, selected }: Props = $props();
 
-	const ondragstart: DragEventHandler<HTMLElement> = (event) => {
-		if (!event.dataTransfer) throw new Error('No data from drag');
-		event.dataTransfer.effectAllowed = 'move';
+	const onselectactionmouse: MouseEventHandler<HTMLElement> = (event) => {
+		if (nameEditable) return;
 
-		entry.showChildren = false;
+		updateDocumentFocus(entry.id);
 
-		event.dataTransfer.setData('text/plain', entry.id);
+		// const updateFocusModifierHeld = event.ctrlKey;
+		// if (updateFocusModifierHeld) console.log('Updating selection!');
+
+		// else project.selected.focus = null;
 	};
 
-	const ondragover: DragEventHandler<HTMLElement> = (event) => {
-		event.preventDefault();
-	};
+	const onselectactionkeyboard: KeyboardEventHandler<HTMLElement> = (event) => {
+		const updateFocusKeyPressed = event.key === 'Enter';
 
-	const ondrop: DragEventHandler<HTMLElement> = (event) => {
-		event.preventDefault();
-
-		const dragEntryId = event.dataTransfer?.getData('text/plain');
-
-		if (dragEntryId === undefined) throw new Error('No data from drag entry.');
-
-		const dropEntryId = entry.id;
-		// TODO loads of assumptions here: only top-level, always after, no drop inside logic, etc
-		const dragDropTransaction: Transaction = (entries) => {
-			return move(entries, [dragEntryId], {
-				pathIds: [dropEntryId],
-				relation: positionRelation.AFTER,
-				in: false
-			});
-		};
-
-		const documentId = project.selected?.id;
-		if (documentId === undefined)
-			throw new Error('No document selected for drag and drop interaction.');
-
-		addTransaction(documentId, dragDropTransaction);
+		if (updateFocusKeyPressed) updateDocumentFocus(entry.id);
 	};
 
 	const issuesAnchorName = newAnchorName();
@@ -77,78 +52,81 @@
 	let nameEditable = $state(false);
 </script>
 
-<li
-	class={{ node: true, 'dragging-over': draggingOver, selected }}
-	draggable="true"
-	role="treeitem"
-	tabindex="0"
-	aria-selected="false"
-	aria-expanded={entry.showChildren}
-	{ondragstart}
-	{ondragover}
-	{ondrop}
-	ondragenter={onnodedragenter}
-	onclick={onselectaction}
-	onkeypress={onselectaction}
-	style:--anchor-name={entryAnchorName}
->
-	<span>
-		<div class="controls">
-			{#if entry.children !== null}
-				<IconToggle
-					Unchecked={ChevronRight}
-					Checked={ChevronDown}
-					bind:checked={entry.showChildren}
-				/>
-			{/if}
-		</div>
-		<img class="tool-icon" src={entryTypeIcon[entry.type] + '.svg'} alt="" />
+{#key entry.id}
+	<li
+		class={{
+			node: true,
+			hovered: getEntryDragState().lastHovered === entry.id,
+			dragged: getEntryDragState().lastDragged === entry.id,
+			dropped: getEntryDragState().lastDropped === entry.id,
+			selected
+		}}
+		draggable="true"
+		role="treeitem"
+		tabindex="0"
+		aria-selected={selected ? 'true' : 'false'}
+		aria-expanded={entry.showChildren}
+		style:--anchor-name={entryAnchorName}
+		// Drag event handlers
+		ondragstart={createDragStartHandler(entry.id, setDragStart, () =>
+			setShowChildren(entry.id, false)
+		)}
+		ondragover={createDragOverHandler(entry.id, setDragOver)}
+		ondrop={createDropHandler(entry.id, setDrop)}
+		// Other event handlers
+		onclick={onselectactionmouse}
+		onkeypress={onselectactionkeyboard}
+	>
+		<span class="contents">
+			<div class="controls">
+				{#if entry.children !== null}
+					<IconToggle
+						Unchecked={ChevronRight}
+						Checked={ChevronDown}
+						bind:checked={() => entry.showChildren, (value) => setShowChildren(entry.id, value)}
+					/>
+				{/if}
+			</div>
+			<img class="tool-icon" src={entryTypeIcon[entry.type] + '.svg'} alt="" />
 
-		<!-- TODO Input messes dragging up. Should only be activated with double-click. Hard to do. -->
-		<span
-			class="name-input"
-			tabindex="0"
-			role="textbox"
-			contenteditable={nameEditable}
-			oninput={() => console.log('Input!')}
-			ondblclick={() => (nameEditable = !nameEditable)}>{entry.name}</span
-		>
-		<!-- <input type="text" value={entry.name} class="disguised-input" /> -->
+			<span
+				class="name-input"
+				tabindex="0"
+				role="textbox"
+				contenteditable={nameEditable}
+				ondblclick={() => (nameEditable = true)}
+				onblur={() => (nameEditable = false)}>{entry.name}</span
+			>
 
-		<!-- Add dynamic issues -->
-		<div class="issues">
-			{#if Math.random() > 0.9}
-				<div class="issue" style:--anchor-name={issuesAnchorName} {...fleetingAnchorEvents}>
-					<CircleAlert color="var(--alert-0)" />
+			<!-- Add dynamic issues -->
+			<div class="issues">
+				{#if Math.random() > 0.9}
+					<div class="issue" style:--anchor-name={issuesAnchorName} {...fleetingAnchorEvents}>
+						<CircleAlert color="var(--alert-0)" />
 
-					<div id="issue-popover" popover="hint" {@attach fleetingTarget}>
-						{#if entryTypeCategory[entry.type] === entryCategory.SKETCH}
-							<span>Sketch is not fully constrained</span>
-						{:else if entryTypeCategory[entry.type] === entryCategory.MODELLING}
-							<span>Sketch is not closed</span>
-						{:else}
-							<span>Reference is broken</span>
-						{/if}
+						<div id="issue-popover" popover="hint" {@attach fleetingTarget}>
+							{#if entryTypeCategory[entry.type] === entryCategory.SKETCH}
+								<span>Sketch is not fully constrained</span>
+							{:else if entryTypeCategory[entry.type] === entryCategory.MODELLING}
+								<span>Sketch is not closed</span>
+							{:else}
+								<span>Reference is broken</span>
+							{/if}
+						</div>
 					</div>
-				</div>
-			{/if}
-		</div>
-	</span>
+				{/if}
+			</div>
+		</span>
 
-	{#if entry.children !== null && entry.showChildren}
-		<ul class="children" role="group">
-			{#each entry.children as child, index (child)}
-				<!-- TODO onnodedragenter is only for the parent, need the generator function here too -->
-				<TreeEntry
-					bind:entry={entry.children[index]}
-					{onnodedragenter}
-					draggingOver={false}
-					{selected}
-				/>
-			{/each}
-		</ul>
-	{/if}
-</li>
+		{#if entry.children !== null && entry.showChildren}
+			<ul class="children" role="group">
+				{#each entry.children as child (child.id)}
+					<TreeEntry entry={child} {selected} />
+				{/each}
+			</ul>
+		{/if}
+	</li>
+{/key}
 
 <style>
 	.node {
@@ -159,16 +137,29 @@
 		padding: 0.25rem;
 		anchor-name: var(--anchor-name);
 	}
+	.node.hovered {
+		anchor-name: --my-anchor;
+	}
+	.node.dragged {
+		background-color: lightgreen;
+	}
+	.node.dropped {
+		background-color: lightsalmon;
+		animation: background-flash 1s linear normal forwards;
+	}
 	.node.selected {
 		color: var(--surface-0);
 		background-color: var(--contrast);
-	}
-	.node.dragging-over {
-		background-color: red;
-		anchor-name: --my-anchor;
+		animation: none;
 	}
 
-	.node > span {
+	@keyframes background-flash {
+		100% {
+			background-color: transparent;
+		}
+	}
+
+	.contents {
 		display: flex;
 		align-content: center;
 	}
@@ -185,6 +176,13 @@
 
 	.name-input {
 		width: 100%;
+		cursor: default;
+		user-select: none;
+	}
+	.name-input[contenteditable='true'] {
+		outline: 2px solid red;
+		cursor: text;
+		user-select: default;
 	}
 
 	.issue {

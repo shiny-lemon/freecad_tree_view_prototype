@@ -1,72 +1,42 @@
 <script lang="ts">
-	import {
-		positionRelation,
-		type Entry,
-		type Position,
-		type PositionRelation
-	} from '$lib/project/entry';
-	import type { DragEventHandler } from 'svelte/elements';
+	import { type Entry } from '$lib/project/entry';
 	import TreeEntry from './TreeEntry.svelte';
 	import type { Snippet } from 'svelte';
 	import { newAnchorName } from '$lib/popover';
+	import { isEntrySelected, type Document } from '$lib/project/document';
+	import { getEntryDragState, getSelected } from '$lib/data/data.svelte';
 
 	interface Props {
 		entries: Entry[];
+		selectedDocument: Document;
 		fallback: Snippet;
 	}
 
-	const { entries = $bindable(), fallback }: Props = $props();
+	const { entries, fallback, selectedDocument }: Props = $props();
 
-	// This is very stupid and does not work very well. Need a better solution...
-	const createOnNodeDragEnter = (entry: Entry) => {
-		return (
-			event: Parameters<DragEventHandler<HTMLElement>>[0]
-		): ReturnType<DragEventHandler<HTMLElement>> => {
-			event.preventDefault();
-			setDragOver(entry.id, positionRelation.AFTER);
-		};
-	};
-
-	// This logic should definitely be hid away in an event listener passed down to the child nodes...
-	interface DragOverData {
-		entryId: string;
-		relation: PositionRelation;
-	}
-	let dragOverData: DragOverData | null = $state(null);
-	const setDragOver = (entryId: string, relation: PositionRelation) =>
-		(dragOverData = { entryId, relation });
-
-	interface NodeSelection {
-		anchor: Position;
-		focus: Position;
-	}
-	const nodeSelection: NodeSelection | null = $state(null);
 	const tipPosition = $derived(entries.at(-1)?.id);
 </script>
 
-{#if dragOverData !== null}
-	<div class="dragger-indicator"></div>
+{#if getSelected().drag.entry.lastHovered !== null}
+	<div class="dragger-indicator" data-drag-position={getEntryDragState().lastPosition}></div>
 {/if}
 
-<div class="tip-indicator" style:--anchor-name={newAnchorName(tipPosition)}>
-	<div class="stick"></div>
-	<div class="handle">
-		<div class="grab-indicator"></div>
-		<div class="grab-indicator"></div>
+{#if tipPosition !== undefined}
+	<div class="tip-indicator" style:--anchor-name={newAnchorName(tipPosition)}>
+		<div class="stick"></div>
+		<div class="handle">
+			<div class="grab-indicator"></div>
+			<div class="grab-indicator"></div>
+		</div>
 	</div>
-</div>
+{/if}
 
 <ul class="nodes" role="tree" tabindex="-1">
-	{#each entries as entry, index}
-		<TreeEntry
-			bind:entry={entries[index]}
-			onnodedragenter={createOnNodeDragEnter(entry)}
-			draggingOver={entry.id === dragOverData?.entryId}
-			selected={false}
-		/>
-	{/each}
-
 	{@render fallback()}
+
+	{#each entries as entry, index (entry.id)}
+		<TreeEntry entry={entries[index]} selected={isEntrySelected(entry.id, selectedDocument)} />
+	{/each}
 </ul>
 
 <style>
@@ -78,11 +48,19 @@
 	.dragger-indicator {
 		position: absolute;
 		position-anchor: --my-anchor;
-		position-area: bottom;
 
 		background-color: var(--contrast);
 		height: 0.25rem;
 		width: 18rem;
+	}
+	.dragger-indicator[data-drag-position='top'] {
+		position-area: top;
+	}
+	.dragger-indicator[data-drag-position='center'] {
+		visibility: hidden;
+	}
+	.dragger-indicator[data-drag-position='bottom'] {
+		position-area: bottom;
 	}
 
 	.tip-indicator {
