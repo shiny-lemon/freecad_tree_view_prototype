@@ -1,6 +1,6 @@
 import type { Attachment } from "svelte/attachments";
 
-export const newAnchorName = () => '--' + crypto.randomUUID();
+export const newAnchorName = (string: string = crypto.randomUUID()) => '--' + string;
 
 export const popoverAnchorEvents = (showFunction: () => void, hideFunction: () => void) => {
     const eventListeners = {

@@ -1,16 +1,88 @@
-import { Box, Drill, House, type Icon, Link, StickyNote, Table2 } from '@lucide/svelte';
-import iconAssembly from "$lib/assets/tools/workbench/assembly.svg"
-import {
-	featureCategory,
-	isDressUpType,
-	isModelingType,
-	isPatternType,
-	isSketchType,
-	type Feature,
-	type FeatureCategory
-} from './feature';
-import type { Joint } from './joint';
-import { folder, partEntryType, type Entry, type PartEntry } from './entry.ts';
+import { entryCategory, entryFilter, entryFilterFunction, entryTypeCategory, type Entry, type EntryCategory, type EntryFilter, type EntryId, type EntryType, type FilterFunction, } from './entry.ts';
+import { type Range } from "./"
+import { getEntry } from './project.ts';
+import { newDragState, type DragState } from './drag.ts';
+
+export interface Document {
+	id: DocumentId;
+	name: string;
+	type: DocumentType;
+	thumbnail: string | null;
+	entries: Entry[];
+
+	// State
+	focus: Range<EntryId> | null,
+	pinned: boolean,
+	filterFunction: FilterFunction,
+	drag: {
+		entry: DragState<EntryId>
+		tip: DragState<EntryId>
+		part: DragState<DocumentId>
+	}
+}
+
+export type DocumentId = string;
+
+export const newDocument = (type: DocumentType, name: string, thumbnail?: string): Document => {
+	const document: Document = {
+		id: crypto.randomUUID(),
+		name,
+		type,
+		thumbnail: thumbnail ?? null,
+		entries: [],
+		focus: null,
+		pinned: false,
+		filterFunction: entryFilterFunction[entryFilter.ALL],
+		drag: {
+			entry: newDragState(),
+			tip: newDragState(),
+			part: newDragState(),
+		}
+	};
+
+	return document;
+};
+
+export const isEntrySelected = (givenId: string, document: Document): boolean => {
+	if (document.focus === null) return false;
+
+	const { anchor: anchorId, focus: focusId } = document.focus;
+
+	const anchorIndex = document.entries.findIndex(({ id }) => id === anchorId);
+	const focusIndex = document.entries.findIndex(({ id }) => id === focusId);
+
+	const givenIndex = document.entries.findIndex(({ id }) => id === givenId);
+
+	return (givenIndex <= focusIndex && givenIndex >= anchorIndex) ||
+		(givenIndex <= anchorIndex && givenIndex >= focusIndex);
+}
+
+export const entrySelectionType = {
+	SELECT: "select",
+	DESELECT: "deselect",
+} as const;
+export type EntrySelectionType = (typeof entrySelectionType)[keyof typeof entrySelectionType];
+
+export const updateFocus = (document: Document, id: EntryId, type: EntrySelectionType): Document => {
+	if (document.focus?.anchor === id && document.focus.focus === id) document.focus = null;
+	else document.focus = { anchor: getEntry(document, id).id, focus: getEntry(document, id).id }
+	return document
+}
+
+export const getFocusedEntries = (document: Document): Entry[] => {
+	if (document.focus === null) return [];
+
+	const { anchor, focus } = document.focus
+
+	const anchorIndex = document.entries.findIndex(({ id }) => id === anchor);
+	const focusIndex = document.entries.findIndex(({ id }) => id === focus);
+
+	if (anchorIndex === focusIndex) return [document.entries[anchorIndex]];
+
+	return document.entries.slice(anchorIndex, focusIndex);
+}
+
+// Enums
 
 export const documentType = {
 	PART: 'part',
@@ -20,26 +92,16 @@ export const documentType = {
 	TECH_DRAW: 'tech-draw',
 	VAR_SET: 'var-set'
 } as const;
+export type DocumentType = (typeof documentType)[keyof typeof documentType];
 
-export const displayType = (type: DocumentType): string => {
-	switch (type) {
-		case documentType.PART:
-			return 'Part';
-		case documentType.ASSEMBLY:
-			return 'Assembly';
-		case documentType.BIM:
-			return 'BIM';
-		case documentType.CAM:
-			return 'CAM';
-		case documentType.TECH_DRAW:
-			return 'TechDraw';
-		case documentType.VAR_SET:
-			return 'VarSet';
-		default:
-			const unhandledType: never = type;
-			throw new Error(`Unhandled type case: ${unhandledType}`);
-	}
-};
+export const documentTypeDisplayName = {
+	[documentType.PART]: "Part",
+	[documentType.ASSEMBLY]: "Assembly",
+	[documentType.BIM]: "BIM",
+	[documentType.CAM]: "CAM",
+	[documentType.TECH_DRAW]: "TechDraw",
+	[documentType.VAR_SET]: "VarSet",
+} as const satisfies Record<DocumentType, string>;
 
 export const documentTypeWorkbenches: Record<DocumentType, string[]> = {
 	[documentType.PART]: ['Part Design', 'Sketcher', 'Surface'],
@@ -50,114 +112,42 @@ export const documentTypeWorkbenches: Record<DocumentType, string[]> = {
 	[documentType.VAR_SET]: []
 } as const;
 
-export type DocumentType = (typeof documentType)[keyof typeof documentType];
+const workbenchPath = "src/lib/assets/tools/workbench/" as const;
+export const documentTypeIcon = {
+	[documentType.PART]: workbenchPath + "part-design",
+	[documentType.ASSEMBLY]: workbenchPath + "assembly",
+	[documentType.BIM]: workbenchPath + "bim",
+	[documentType.CAM]: workbenchPath + "cam",
+	[documentType.TECH_DRAW]: workbenchPath + "tech-draw",
+	[documentType.VAR_SET]: workbenchPath + "var-set",
 
-// TODO Help! I have absolutely no idea how to make this type equivalent to what
-type FilterPredicate<T> = (value: T, index: number, array: T[]) => unknown;
-// ENDED HERE LAST TIME
-// So I basically want the end-api to not care about the filter function
-// It should only need to supply a type of a document (e.g. joints in Assembly, sketches, in Part)
-// And then we filter it here
-// How should types work for that?
-// No idea
-// Probably need a type dependend on some thing
-// So Document (interface) might need to be generic to accomendate that
-// ??
-type EntriesFunction = (filterType?: unknown) => Entry[];
+} as const satisfies Record<DocumentType, string>
 
-export interface Document {
-	id: string;
-	name: string;
-	type: DocumentType;
-	thumbnail: string | null;
-	entries: EntriesFunction;
-}
-
-export interface Assembly extends Document {
-	parts: Part[];
-	joints: Joint[];
-}
-
-export interface Part extends Document {
-	features: Feature[];
-}
-
-const newDocument = (name: string, type: DocumentType, thumbnail?: string): Document => {
-	const document: Document = {
-		id: crypto.randomUUID(),
-		name,
-		type,
-		thumbnail: thumbnail ?? null,
-		entries: () => []
-	};
-
-	return document;
-};
-
-export const partFilterFunctions: Record<FeatureCategory, FilterPredicate<Feature>> = {
-	[featureCategory.ANY]: () => true,
-	[featureCategory.SKETCH]: ({ type }) => isSketchType(type),
-	[featureCategory.MODELING]: ({ type }) => isModelingType(type),
-	[featureCategory.PATTERN]: ({ type }) => isPatternType(type),
-	[featureCategory.DRESS_UP]: ({ type }) => isDressUpType(type)
+export const documentTypeEntryFilter: Record<DocumentType, EntryFilter[]> = {
+	[documentType.PART]: [entryFilter.ALL, entryFilter.SKETCH, entryFilter.MODELLING, entryFilter.PATTERN, entryFilter.DRESS_UP, entryFilter.ISSUE],
+	[documentType.ASSEMBLY]: [entryFilter.ALL, entryFilter.BODY, entryFilter.JOINT_BASIC, entryFilter.JOINT_FACE, entryFilter.JOINT_ADVANCED, entryFilter.ISSUE],
+	[documentType.BIM]: [],
+	[documentType.CAM]: [],
+	[documentType.TECH_DRAW]: [],
+	[documentType.VAR_SET]: [],
 } as const;
 
-export const newPart = (name: string, thumbnail?: string): Part => {
-	const features: Feature[] = [];
-	const document = {
-		...newDocument(name, documentType.PART, thumbnail),
+export const documentTypeEntryCategory: Record<DocumentType, EntryCategory[]> = {
+	[documentType.PART]: [entryCategory.SKETCH, entryCategory.MODELLING, entryCategory.PATTERN, entryCategory.DRESS_UP],
+	[documentType.ASSEMBLY]: [entryCategory.BODY, entryCategory.JOINT_BASIC, entryCategory.JOINT_FACE, entryCategory.JOINT_ADVANCED],
+	[documentType.BIM]: [],
+	[documentType.CAM]: [],
+	[documentType.TECH_DRAW]: [],
+	[documentType.VAR_SET]: [],
+}
 
-		entries(predicate) {
-			if (!predicate) return this.features;
+export const documentTools = (selectedDocument: DocumentType): EntryType[] => {
+	const availableCategories = documentTypeEntryCategory[selectedDocument];
 
-			const filteredEntries = this.features.filter(predicate);
-			return filteredEntries;
-		},
+	const availableEntryTypeCategories = Object.entries(entryTypeCategory).filter(([_, category]) => availableCategories.includes(category))
 
-		features
-	} satisfies Part;
-	return document;
-};
+	const availableEntryTypes = availableEntryTypeCategories.map(([entry, _category]) => entry as EntryType)
 
-export const newAssembly = (name: string, parts: Part[], thumbnail?: string): Assembly => {
-	const joints: Joint[] = [];
-	const document = {
-		...newDocument(name, documentType.ASSEMBLY, thumbnail),
-		parts,
-		joints,
-		entries(predicate) {
-			const jointsFolder = folder('Joints');
-			jointsFolder.children = this.joints;
-			const partsEntries: PartEntry[] = this.parts.map(({ name }) => {
-				return { id: crypto.randomUUID(), type: partEntryType, name };
-			});
+	return availableEntryTypes
+}
 
-			const entries = [jointsFolder, ...partsEntries] satisfies Entry[];
-			if (!predicate) return entries;
-
-			const filteredEntries = entries.filter(predicate);
-			return filteredEntries;
-		}
-	} satisfies Assembly;
-	return document;
-};
-
-export const documentIcon = async (type: DocumentType): Promise<string> => {
-	switch (type) {
-		case documentType.PART:
-			return (await import("$lib/assets/tools/workbench/partdesign.svg")).default;
-		case documentType.ASSEMBLY:
-			return (await import("$lib/assets/tools/workbench/assembly.svg")).default
-		case documentType.BIM:
-			return (await import("$lib/assets/tools/workbench/bim.svg")).default
-		case documentType.CAM:
-			return (await import("$lib/assets/tools/workbench/cam.svg")).default
-		case documentType.TECH_DRAW:
-			return (await import("$lib/assets/tools/workbench/tech-draw.svg")).default
-		case documentType.VAR_SET:
-			return (await import("$lib/assets/tools/workbench/var-set.svg")).default
-		default:
-			const unhandledType: never = type;
-			throw new Error(`Unhandled type case: ${unhandledType}`);
-	}
-};

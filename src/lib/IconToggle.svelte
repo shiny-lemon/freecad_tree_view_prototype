@@ -1,24 +1,31 @@
 <script lang="ts">
+	import type { IconProps } from '@lucide/svelte';
 	import type { Component } from 'svelte';
-	import type { ChangeEventHandler } from 'svelte/elements';
 
-	interface Props {
+	interface IconToggleProps {
 		Unchecked: Component;
 		Checked: Component;
 		checked?: boolean;
-		onchange?: ChangeEventHandler<HTMLInputElement>;
 	}
 
-	let { Unchecked, Checked, checked = $bindable(false), onchange }: Props = $props();
+	type Props = IconToggleProps & IconProps;
+
+	let {
+		Unchecked,
+		Checked,
+		checked = $bindable(false),
+		onchange,
+		...componentProps
+	}: Props = $props();
 </script>
 
 <label>
-	<input type="checkbox" name="toggle" bind:checked {onchange} />
+	<input type="checkbox" name="toggle" bind:checked />
 	<div class="icon">
 		{#if checked}
-			<Checked />
+			<Checked {...componentProps} />
 		{:else}
-			<Unchecked />
+			<Unchecked {...componentProps} />
 		{/if}
 	</div>
 </label>

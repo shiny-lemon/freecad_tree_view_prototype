@@ -1,102 +1,289 @@
-// Many of the things in `feature.ts` should be generalized to entry.ts
-// As joints and parts in an assembly are not features, but behave in mostly the same way
-// Therefore good to split them up
-// Can't call it object, because of JavaScript and its names...
-
-import type { Feature, FeatureType } from './feature';
-import type { JointType } from './joint';
-
 export interface Entry {
-	id: string;
+	id: EntryId;
 	type: EntryType;
 	name: string;
+	children: Entry[] | null;
+
+	// State
+	showChildren: boolean;
+	issues: Issue[];
 }
 
-export const folderType = 'folder' as const;
-export type FolderType = typeof folderType;
-export interface Folder extends Entry {
-	type: FolderType;
-	children: Entry[];
+export type EntryId = string;
+
+const issueLevel = {
+	LOW: 0,
+	MEDIUM: 1,
+	HIGH: 2,
+}
+type IssueLevel = typeof issueLevel[keyof typeof issueLevel]
+
+interface Issue {
+	level: IssueLevel,
+	message: string,
 }
 
-export const partEntryType = 'part' as const;
-export type PartEntryType = typeof partEntryType;
-export interface PartEntry extends Entry {
-	type: PartEntryType;
-}
+export const createEntry = (type: EntryType, name: string, allowChildren = false): Entry => {
+	return {
+		id: crypto.randomUUID(),
+		type,
+		name,
+		children: allowChildren ? [] : null,
 
-export type EntryType = FeatureType | JointType | FolderType | PartEntryType;
-
-export const isEntryWithChildren = (entry: Entry): entry is Folder | Feature => {
-	const typedEntry = entry as Folder | Feature;
-	return typedEntry.children !== undefined;
-};
-
-export const folder = (name: string): Folder => {
-	const folder: Folder = { id: crypto.randomUUID(), type: folderType, name, children: [] };
-
-	return folder;
-};
-
-export const insert = (entry: Entry, into: Entry[], at: number = -1) => {
-	if (at === -1) {
-		into.push(entry);
-	} else {
-		into.splice(at, 0, entry);
+		showChildren: false,
+		issues: [],
 	}
-	return into;
-};
-
-export const seek = <TEntry extends Entry>(entries: TEntry[], at: number = -1) => {
-	const found = entries.at(at);
-
-	if (found === undefined) throw Error(`Cannot find entry at ${at} in ${entries}`);
-
-	return found;
-};
-
-export const findIndex = <TEntry extends Entry>(entries: TEntry[], desired: TEntry) => {
-	console.log('Entries: ', entries);
-	const find = entries.findIndex(({ id }) => id === desired.id);
-
-	if (find === -1) throw Error(`Cannot find desired entry ${desired} in ${entries}`);
-
-	return find;
-};
-
-// https://svelte.dev/docs/svelte/svelte-js-files
-export const move = (entries: Entry[], at: number, to: number) => {
-	const entryToMove = seek(entries, at);
-	entries.splice(at, 1);
-	entries.splice(to, 0, entryToMove);
-	return entries;
-};
-
-export const rename = (entries: Entry[], at: number, name: string) => {
-	const entryToRename = seek(entries, at);
-	entryToRename.name = name;
-	return entries;
-};
-
-// We actually don't really care if its a joint, a feature or a folder. It's all the same to the tree view!
-// So the "perfect" structure should just be gone.
-// Let's only implement *exactly* what is needed for the tree. No further typing/division/structure necessary.
-// All entries should be one
-// Each entry should have an image
-// entry can return null (can't have children) or [] (doesn't have children *right now* but is able to have them)
-// Instead of having all of these isXGroup (like isSketchType) which *technically* is more functional can't we just have a 'group' attribute
-// Then we can sort between all availabe groups - not computationally efficient, but time efficient for me!
-
-interface NewEntry {
-	id: string;
-	type: string;
-	group: string; // <---- Probably just a tuple in type instead :/
-	name: string;
-	children: NewEntry | null;
 }
 
-// type EntryGroup = [???, ???]
-// type Workbenches = "part-design" | "Surface"
+export const filter = (entries: Entry[], predicate: (entry: Entry) => boolean): Entry[] => {
+	return entries.filter(predicate);
+}
 
-// Something in practice like this instead, maybe?
-// type = ["dress-up", "fillet"]
+export const positionRelation = {
+	BEFORE: "before",
+	AFTER: "after",
+} as const;
+export type PositionRelation = typeof positionRelation[keyof typeof positionRelation]
+
+export interface Position {
+	id: EntryId | null;
+	relation: PositionRelation;
+	in: boolean;
+}
+
+export const insert = (entries: Entry[],
+	entry: Entry,
+	at: Position = { id: null, relation: positionRelation.AFTER, in: false }
+): Entry[] => {
+
+	if (at.in && at.id === null) throw new Error("Cannot insert into entry when no id is specified.")
+
+	if (entries.length === 0) return [entry]
+
+	return traverse(entries, (previous, current) => {
+		const insertNextTo = !at.in && current.id === at.id
+		if (at.relation === positionRelation.BEFORE && insertNextTo) return [...previous, entry, current];
+		if (at.relation === positionRelation.AFTER && insertNextTo || at.id === null) return [...previous, current, entry];
+
+		if (at.in && current.id === at.id) {
+			const inPosition = { in: false, id: null, relation: at.relation }
+			current.children = insert(current.children || [], entry, inPosition);
+		}
+
+		return [...previous, current]
+	})
+}
+
+const find = (entries: Entry[], id: EntryId): Entry => {
+	const result = flatten(entries).find((entry) => entry.id === id)
+	if (result === undefined) throw new Error(`Could not find entry with id ${id}`);
+	return result;
+}
+
+const remove = (entries: Entry[], id: EntryId): Entry[] => {
+	return traverse(entries, (previous, current) => {
+		if (current.id === id) return previous
+
+		if (current.children !== null) {
+			current.children = remove(current.children, id)
+		}
+
+		return [...previous, current]
+	})
+}
+
+export const move = (entries: Entry[], id: EntryId, to: Position) => {
+	const entry = find(entries, id)
+	const remainingEntries = remove(entries, id);
+
+	return insert(remainingEntries, entry, to);
+}
+
+export const traverse = (entries: Entry[], callbackfn: (previousValue: Entry[], currentValue: Entry, currentIndex: number, array: Entry[]) => Entry[]): Entry[] => {
+	return entries.reduce<Entry[]>((previousValue, currentValue, currentIndex, array) => {
+		return callbackfn(previousValue, currentValue, currentIndex, array)
+	}, [])
+}
+
+export const flatten = (entries: Entry[]): Entry[] => {
+	return traverse(entries, (previous, current) => {
+		const currentEntries = flatten(current.children || []);
+		return [...previous, current, ...currentEntries];
+	})
+}
+
+// Enums
+export const entryType = {
+	SKETCH: "sketch",
+
+	PAD: 'pad',
+	POCKET: 'pocket',
+
+	LINEAR: 'linear',
+	POLAR: 'polar',
+
+	FILLET: 'fillet',
+	CHAMFER: 'chamfer',
+
+	FIXED: 'fixed',
+	REVOLUTE: 'revolute',
+	CYLINDRICAL: 'cylindrical',
+	SLIDER: 'slider',
+	BALL: 'ball',
+
+	DISTANCE: 'distance',
+	PARALLEL: 'parallel',
+	PERPENDICULAR: 'perpendicular',
+	ANGLE: 'angle',
+
+	RACK_AND_PINION: 'rack-and-pinion',
+	SCREW: 'screw',
+	GEARS: 'gears',
+	BELT: 'belt',
+
+	BODY: "body",
+
+	FOLDER: "folder",
+} as const;
+export type EntryType = typeof entryType[keyof typeof entryType]
+
+const toolPath = "src/lib/assets/tools/" as const;
+export const entryTypeIcon = {
+	[entryType.SKETCH]: toolPath + "part-design/new-sketch",
+
+	[entryType.PAD]: toolPath + "part-design/pad",
+	[entryType.POCKET]: toolPath + "part-design/pocket",
+
+	[entryType.LINEAR]: toolPath + "part-design/linear-pattern",
+	[entryType.POLAR]: toolPath + "part-design/polar-pattern",
+
+	[entryType.FILLET]: toolPath + "part-design/fillet",
+	[entryType.CHAMFER]: toolPath + "part-design/chamfer",
+
+	[entryType.FIXED]: toolPath + "assembly/fixed-joint",
+	[entryType.REVOLUTE]: toolPath + "assembly/revolute-joint",
+	[entryType.CYLINDRICAL]: toolPath + "assembly/cylindrical-joint",
+	[entryType.SLIDER]: toolPath + "assembly/slider-joint",
+	[entryType.BALL]: toolPath + "assembly/ball-joint",
+
+	[entryType.DISTANCE]: toolPath + "assembly/distance-joint",
+	[entryType.PARALLEL]: toolPath + "assembly/parallel-joint",
+	[entryType.PERPENDICULAR]: toolPath + "assembly/perpendicular-joint",
+	[entryType.ANGLE]: toolPath + "assembly/angle-joint",
+
+	[entryType.RACK_AND_PINION]: toolPath + "assembly/rack-pinion-joint",
+	[entryType.SCREW]: toolPath + "assembly/screw-joint",
+	[entryType.GEARS]: toolPath + "assembly/gears-joint",
+	[entryType.BELT]: toolPath + "assembly/belt-joint",
+
+	[entryType.BODY]: toolPath + "part-design/body",
+
+	[entryType.FOLDER]: toolPath + "std/group",
+
+} as const satisfies Record<EntryType, string>
+
+export const entryCategory = {
+	SKETCH: "sketch",
+	MODELLING: "modelling",
+	PATTERN: "pattern",
+	DRESS_UP: "dress-up",
+	JOINT_BASIC: "joint-basic",
+	JOINT_FACE: "joint-face",
+	JOINT_ADVANCED: "joint-advanced",
+	BODY: "body",
+	NO_CATEGORY: "no-category",
+} as const;
+export type EntryCategory = typeof entryCategory[keyof typeof entryCategory]
+
+export const entryTypeCategory: Record<EntryType, EntryCategory> = {
+	[entryType.SKETCH]: entryCategory.SKETCH,
+
+	[entryType.PAD]: entryCategory.MODELLING,
+	[entryType.POCKET]: entryCategory.MODELLING,
+
+	[entryType.LINEAR]: entryCategory.PATTERN,
+	[entryType.POLAR]: entryCategory.PATTERN,
+
+	[entryType.FILLET]: entryCategory.DRESS_UP,
+	[entryType.CHAMFER]: entryCategory.DRESS_UP,
+
+	[entryType.FIXED]: entryCategory.JOINT_BASIC,
+	[entryType.REVOLUTE]: entryCategory.JOINT_BASIC,
+	[entryType.CYLINDRICAL]: entryCategory.JOINT_BASIC,
+	[entryType.SLIDER]: entryCategory.JOINT_BASIC,
+	[entryType.BALL]: entryCategory.JOINT_BASIC,
+
+	[entryType.DISTANCE]: entryCategory.JOINT_FACE,
+	[entryType.PARALLEL]: entryCategory.JOINT_FACE,
+	[entryType.PERPENDICULAR]: entryCategory.JOINT_FACE,
+	[entryType.ANGLE]: entryCategory.JOINT_FACE,
+
+	[entryType.RACK_AND_PINION]: entryCategory.JOINT_ADVANCED,
+	[entryType.SCREW]: entryCategory.JOINT_ADVANCED,
+	[entryType.GEARS]: entryCategory.JOINT_ADVANCED,
+	[entryType.BELT]: entryCategory.JOINT_ADVANCED,
+
+	[entryType.BODY]: entryCategory.BODY,
+
+	[entryType.FOLDER]: entryCategory.NO_CATEGORY,
+} as const;
+
+export const entryCategoryDisplayName = {
+	[entryCategory.SKETCH]: "Sketches",
+	[entryCategory.MODELLING]: "Modelling",
+	[entryCategory.PATTERN]: "Patterns",
+	[entryCategory.DRESS_UP]: "Dress-ups",
+	[entryCategory.JOINT_BASIC]: "Basic joints",
+	[entryCategory.JOINT_FACE]: "Face joints",
+	[entryCategory.JOINT_ADVANCED]: "Advanced joints",
+	[entryCategory.BODY]: "Bodies",
+	[entryCategory.NO_CATEGORY]: null,
+} as const satisfies Record<EntryCategory, string | null>
+
+export const entryFilter = {
+	"ALL": "all",
+	"SKETCH": "sketch",
+	"MODELLING": "modelling",
+	"PATTERN": "pattern",
+	"DRESS_UP": "dress-up",
+	"JOINT_BASIC": "joint-basic",
+	"JOINT_FACE": "joint-face",
+	"JOINT_ADVANCED": "joint-advanced",
+	"BODY": "body",
+	"ISSUE": "issue",
+} as const
+export type EntryFilter = typeof entryFilter[keyof typeof entryFilter]
+
+export type FilterFunction = (entry: Entry) => boolean
+
+export const entryFilterFunction: Record<EntryFilter, FilterFunction> = {
+	[entryFilter.ALL]: (_entry) => true,
+
+	[entryFilter.SKETCH]: ({ type }) => entryTypeCategory[type] === entryCategory.SKETCH,
+	[entryFilter.MODELLING]: ({ type }) => entryTypeCategory[type] === entryCategory.MODELLING,
+	[entryFilter.PATTERN]: ({ type }) => entryTypeCategory[type] === entryCategory.PATTERN,
+	[entryFilter.DRESS_UP]: ({ type }) => entryTypeCategory[type] === entryCategory.DRESS_UP,
+
+	[entryFilter.JOINT_BASIC]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_BASIC,
+	[entryFilter.JOINT_FACE]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_FACE,
+	[entryFilter.JOINT_ADVANCED]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_ADVANCED,
+	[entryFilter.BODY]: ({ type }) => entryTypeCategory[type] === entryCategory.DRESS_UP,
+
+	[entryFilter.ISSUE]: ({ issues }) => issues.length > 0,
+} as const
+
+export const entryFilterDisplayName: Record<EntryFilter, string> = {
+	[entryFilter.ALL]: "All",
+
+	[entryFilter.SKETCH]: entryCategoryDisplayName[entryCategory.SKETCH],
+	[entryFilter.MODELLING]: entryCategoryDisplayName[entryCategory.MODELLING],
+	[entryFilter.PATTERN]: entryCategoryDisplayName[entryCategory.PATTERN],
+	[entryFilter.DRESS_UP]: entryCategoryDisplayName[entryCategory.DRESS_UP],
+
+	[entryFilter.JOINT_BASIC]: entryCategoryDisplayName[entryCategory.JOINT_BASIC],
+	[entryFilter.JOINT_FACE]: entryCategoryDisplayName[entryCategory.JOINT_FACE],
+	[entryFilter.JOINT_ADVANCED]: entryCategoryDisplayName[entryCategory.JOINT_ADVANCED],
+	[entryFilter.BODY]: entryCategoryDisplayName[entryCategory.BODY],
+
+	[entryFilter.ISSUE]: "Issues",
+} as const
