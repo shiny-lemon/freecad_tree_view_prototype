@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { ListFilter, Pin, PinOff } from '@lucide/svelte';
 	import {
-		createEntry,
+		entryFilter,
 		entryFilterDisplayName,
 		entryFilterFunction,
-		entryType,
 		type Entry,
 		type EntryFilter
 	} from '$lib/project/entry';
 	import IconToggle from '$lib/IconToggle.svelte';
-	import { documentTypeEntryFilter, type Document } from '$lib/project/document';
+	import { applyFilter, documentTypeEntryFilter, type Document } from '$lib/project/document';
 	import TreeRoot from './TreeRoot.svelte';
-	import { getFilterFunction, setFilterFunction, setPinned } from '$lib/data/data.svelte';
+	import { setFilterFunction, setPinned } from '$lib/data/data.svelte';
 	import type { FormEventHandler } from 'svelte/elements';
 
 	interface Props {
@@ -21,26 +20,7 @@
 
 	let { entries, selectedDocument }: Props = $props();
 
-	const filterFunction = $derived(getFilterFunction(selectedDocument.id));
-	const shownEntries = $derived.by(() => {
-		// This only goes one layer down, but for the prototype, this is fine.
-
-		const topLevelEntries = entries.filter((value) => {
-			return filterFunction(value);
-		});
-
-		if (topLevelEntries.length >= 1) return topLevelEntries;
-
-		const entriesChildren = entries.reduce<Entry[]>((allChildren, current) => {
-			const filteredChildren = current.children?.filter((value) => filterFunction(value)) || [];
-			if (current.children) allChildren.push(...filteredChildren);
-			return allChildren;
-		}, []);
-
-		if (entriesChildren.length >= 1) return entriesChildren;
-
-		return [];
-	});
+	const shownEntries = $derived(applyFilter(selectedDocument));
 
 	const onfilterchange: FormEventHandler<HTMLFormElement> = (event) => {
 		const filter = (event.target as HTMLInputElement)?.value as EntryFilter;
@@ -74,7 +54,13 @@
 
 					{#each documentTypeEntryFilter[selectedDocument.type] as category}
 						<li>
-							<input type="radio" id={category} name="filter" value={category} checked />
+							<input
+								type="radio"
+								id={category}
+								name="filter"
+								value={category}
+								checked={category === entryFilter.ALL}
+							/>
 							<label for={category}>{entryFilterDisplayName[category]}</label>
 						</li>
 					{/each}

@@ -1,6 +1,7 @@
 import { type Document, type DocumentId } from './document';
 import { type Range } from "./"
-import { flatten, type Entry, type EntryId } from './entry';
+import { type Entry, type EntryId } from './entry';
+import { flatten } from './drag';
 
 export interface Project {
 	name: string;

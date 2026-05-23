@@ -3,22 +3,26 @@
 	import TreeEntry from './TreeEntry.svelte';
 	import IconToggle from '$lib/IconToggle.svelte';
 	import type { KeyboardEventHandler, MouseEventHandler } from 'svelte/elements';
-	import { entryCategory, entryTypeCategory, entryTypeIcon, type Entry } from '../project/entry.ts';
+	import {
+		entryCategory,
+		entryIssueIcon,
+		entryIssueMessage,
+		entryIssueType,
+		entryTypeCategory,
+		entryTypeIcon,
+		type Entry
+	} from '../project/entry';
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
 	import {
-		getEntryDragState,
-		setDragStart,
-		setDrop,
-		setDragOver,
+		getSelected,
+		setEntryCoordinates,
 		setShowChildren,
 		updateDocumentFocus
 	} from '$lib/data/data.svelte';
-	import {
-		createDragOverHandler,
-		createDragStartHandler,
-		createDropHandler
-	} from '$lib/project/drag';
+	import { dragClasses, dragEventHandlers, dragType } from '$lib/project/drag';
+	import { isSpaceAfterEntryInFiltered } from '$lib/project/document';
+	import type { Attachment } from 'svelte/attachments';
 
 	interface Props {
 		entry: Entry;
@@ -44,6 +48,12 @@
 		if (updateFocusKeyPressed) updateDocumentFocus(entry.id);
 	};
 
+	const coordinatesRecorder: Attachment = (element) => {
+		const rectangle = element.getBoundingClientRect();
+		const { top, bottom } = rectangle;
+		setEntryCoordinates(entry.id, { top, bottom });
+	};
+
 	const issuesAnchorName = newAnchorName();
 	const { fleetingAnchorEvents, fleetingTarget } = newFleetingPopover();
 
@@ -56,23 +66,18 @@
 	<li
 		class={{
 			node: true,
-			hovered: getEntryDragState().lastHovered === entry.id,
-			dragged: getEntryDragState().lastDragged === entry.id,
-			dropped: getEntryDragState().lastDropped === entry.id,
-			selected
+			selected,
+			'space-after': isSpaceAfterEntryInFiltered(getSelected(), entry.id),
+			...dragClasses(entry.id)
 		}}
-		draggable="true"
+		draggable={!nameEditable}
 		role="treeitem"
 		tabindex="0"
 		aria-selected={selected ? 'true' : 'false'}
 		aria-expanded={entry.showChildren}
 		style:--anchor-name={entryAnchorName}
-		// Drag event handlers
-		ondragstart={createDragStartHandler(entry.id, setDragStart, () =>
-			setShowChildren(entry.id, false)
-		)}
-		ondragover={createDragOverHandler(entry.id, setDragOver)}
-		ondrop={createDropHandler(entry.id, setDrop)}
+		{...dragEventHandlers(dragType.ENTRY, entry.id)}
+		{@attach coordinatesRecorder}
 		// Other event handlers
 		onclick={onselectactionmouse}
 		onkeypress={onselectactionkeyboard}
@@ -101,19 +106,22 @@
 			<!-- Add dynamic issues -->
 			<div class="issues">
 				{#if Math.random() > 0.9}
-					<div class="issue" style:--anchor-name={issuesAnchorName} {...fleetingAnchorEvents}>
-						<CircleAlert color="var(--alert-0)" />
+					{@const issueType =
+						entryTypeCategory[entry.type] === entryCategory.SKETCH
+							? entryIssueType.NOT_FULLY_CONSTRAINED
+							: entryIssueType.RECOMPUTE}
+					<button
+						class="icon issue"
+						style:--anchor-name={issuesAnchorName}
+						{...fleetingAnchorEvents}
+					>
+						<!-- <CircleAlert color="var(--alert-0)" /> -->
+						<img class="issue-icon" src={entryIssueIcon[issueType] + '.png'} alt="" />
 
 						<div id="issue-popover" popover="hint" {@attach fleetingTarget}>
-							{#if entryTypeCategory[entry.type] === entryCategory.SKETCH}
-								<span>Sketch is not fully constrained</span>
-							{:else if entryTypeCategory[entry.type] === entryCategory.MODELLING}
-								<span>Sketch is not closed</span>
-							{:else}
-								<span>Reference is broken</span>
-							{/if}
+							{entryIssueMessage[issueType]}
 						</div>
-					</div>
+					</button>
 				{/if}
 			</div>
 		</span>
@@ -138,19 +146,24 @@
 		anchor-name: var(--anchor-name);
 	}
 	.node.hovered {
-		anchor-name: --my-anchor;
+		anchor-name: --hovered-entry;
 	}
 	.node.dragged {
-		background-color: lightgreen;
+		background-color: var(--light-contrast);
 	}
 	.node.dropped {
-		background-color: lightsalmon;
+		background-color: var(--light-contrast);
 		animation: background-flash 1s linear normal forwards;
 	}
 	.node.selected {
 		color: var(--surface-0);
 		background-color: var(--contrast);
 		animation: none;
+	}
+	.node.space-after {
+		padding-bottom: 0.35rem;
+		margin-bottom: 0.35rem;
+		border-bottom: 2px dashed var(--subtext-1);
 	}
 
 	@keyframes background-flash {
@@ -180,7 +193,7 @@
 		user-select: none;
 	}
 	.name-input[contenteditable='true'] {
-		outline: 2px solid red;
+		outline: 2px solid var(--contrast);
 		cursor: text;
 		user-select: default;
 	}
@@ -188,6 +201,10 @@
 	.issue {
 		anchor-name: var(--anchor-name);
 		padding: 0 4px;
+	}
+
+	.issue-icon {
+		width: 24px;
 	}
 
 	#issue-popover {
