@@ -11,7 +11,6 @@
 	import Tree from '$lib/tree/Tree.svelte';
 	import { fly } from 'svelte/transition';
 	import Workbenches from '../lib/Workbenches.svelte';
-	import { dev } from '$app/environment';
 	import { entryTypeIcon } from '$lib/project/entry';
 
 	// Std
@@ -21,25 +20,6 @@
 
 	const selectedDocumentType = $derived(getSelected().type);
 </script>
-
-{#if !dev}
-	<dialog {@attach (dialog) => dialog.showModal()}>
-		<form method="dialog">
-			<h1>Hello!</h1>
-			<p>
-				This is a cool prototype. You can read more <a
-					href="https://github.com/shiny-lemon/freecad_tree_view_prototype"
-					target="_blank"
-					tabindex="-1">on GitHub</a
-				>.
-			</p>
-			<p>You are always welcome (and encouraged!) to leave feedback on Discord.</p>
-			<button>Sure!</button>
-		</form>
-	</dialog>
-{:else}
-	{console.info('In dev environment. Skipping intro dialog.')}
-{/if}
 
 <div class="app">
 	<header>
@@ -86,11 +66,6 @@
 </div>
 
 <style>
-	dialog::backdrop {
-		background-color: var(--surface-0);
-		opacity: 0.65;
-	}
-
 	.app {
 		height: 100vh;
 		width: 100vw;
@@ -133,8 +108,11 @@
 		width: 100vw;
 		display: flex;
 
+		overflow-y: hidden;
+
 		.pane {
 			width: 24rem;
+			max-height: 100vh;
 
 			display: flex;
 

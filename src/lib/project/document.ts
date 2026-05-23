@@ -1,7 +1,7 @@
 import { entryCategory, entryFilter, entryFilterFunction, entryTypeCategory, type Entry, type EntryCategory, type EntryFilter, type EntryId, type EntryType, type FilterFunction, } from './entry.ts';
 import { type Range } from "./"
 import { getEntry } from './project.ts';
-import { newDragState, type DragState } from './drag.ts';
+import { flatten, newDragState, type DragState, type DragType } from './drag.ts';
 
 export interface Document {
 	id: DocumentId;
@@ -14,11 +14,8 @@ export interface Document {
 	focus: Range<EntryId> | null,
 	pinned: boolean,
 	filterFunction: FilterFunction,
-	drag: {
-		entry: DragState<EntryId>
-		tip: DragState<EntryId>
-		part: DragState<DocumentId>
-	}
+	drag: DragState
+	tipAnchor: EntryId | null
 }
 
 export type DocumentId = string;
@@ -33,11 +30,8 @@ export const newDocument = (type: DocumentType, name: string, thumbnail?: string
 		focus: null,
 		pinned: false,
 		filterFunction: entryFilterFunction[entryFilter.ALL],
-		drag: {
-			entry: newDragState(),
-			tip: newDragState(),
-			part: newDragState(),
-		}
+		drag: newDragState(),
+		tipAnchor: null,
 	};
 
 	return document;
@@ -56,12 +50,6 @@ export const isEntrySelected = (givenId: string, document: Document): boolean =>
 	return (givenIndex <= focusIndex && givenIndex >= anchorIndex) ||
 		(givenIndex <= anchorIndex && givenIndex >= focusIndex);
 }
-
-export const entrySelectionType = {
-	SELECT: "select",
-	DESELECT: "deselect",
-} as const;
-export type EntrySelectionType = (typeof entrySelectionType)[keyof typeof entrySelectionType];
 
 export const updateFocus = (document: Document, id: EntryId, type: EntrySelectionType): Document => {
 	if (document.focus?.anchor === id && document.focus.focus === id) document.focus = null;
@@ -82,6 +70,55 @@ export const getFocusedEntries = (document: Document): Entry[] => {
 	return document.entries.slice(anchorIndex, focusIndex);
 }
 
+export const applyFilter = (document: Document) => {
+	const filterFunction = document.filterFunction;
+
+	// This only goes one layer down, but for the prototype, this is fine.
+	const topLevelEntries = document.entries.filter((value) => {
+		return filterFunction(value);
+	});
+
+	if (topLevelEntries.length >= 1) return topLevelEntries;
+
+	const entriesChildren = document.entries.reduce<Entry[]>((allChildren, current) => {
+		const filteredChildren = current.children?.filter((value) => filterFunction(value)) || [];
+		if (current.children) allChildren.push(...filteredChildren);
+		return allChildren;
+	}, []);
+
+	if (entriesChildren.length >= 1) return entriesChildren;
+
+	return [];
+};
+
+
+export const isSpaceAfterEntryInFiltered = (document: Document, id: EntryId): boolean => {
+	const filteredEntries = applyFilter(document);
+
+	const flattenedEntries = flatten(document.entries)
+	const flattenedFilteredEntries = flatten(filteredEntries)
+
+	const entry = getEntry(document, id);
+
+	const childrenOffset = entry.children !== null ? entry.children.length : 0;
+
+	const nextEntryIndex = flattenedEntries.findIndex((entry) => entry.id === id) + 1 + childrenOffset;
+	const nextFilteredEntryIndex = flattenedFilteredEntries.findIndex((entry) => entry.id === id) + 1 + childrenOffset;
+
+	const atEntriesEnd = nextFilteredEntryIndex >= flattenedFilteredEntries.length
+	if (atEntriesEnd) return false;
+
+	const nextEntry = flattenedEntries.at(nextEntryIndex);
+	const nextEntryInFiltered = flattenedFilteredEntries.at(nextFilteredEntryIndex)
+
+	if (nextEntry === undefined || nextEntryInFiltered === undefined) throw new Error("Could not find next entry.");
+
+	const entryOrNextEntryIsNotParent = (nextEntryInFiltered.children === null) !== (entry.children === null)
+	if (entryOrNextEntryIsNotParent) return false
+
+	return nextEntry.id !== nextEntryInFiltered.id;
+}
+
 // Enums
 
 export const documentType = {
@@ -93,6 +130,12 @@ export const documentType = {
 	VAR_SET: 'var-set'
 } as const;
 export type DocumentType = (typeof documentType)[keyof typeof documentType];
+
+export const entrySelectionType = {
+	SELECT: "select",
+	DESELECT: "deselect",
+} as const;
+export type EntrySelectionType = (typeof entrySelectionType)[keyof typeof entrySelectionType];
 
 export const documentTypeDisplayName = {
 	[documentType.PART]: "Part",

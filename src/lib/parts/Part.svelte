@@ -1,23 +1,39 @@
 <script lang="ts">
+	import { getSelected } from '$lib/data/data.svelte';
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
+	import type { DocumentId } from '$lib/project/document';
+	import { dragClasses, dragEventHandlers, dragType } from '$lib/project/drag';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	interface Props {
+		id: DocumentId;
 		name: string;
 		image: string | null;
 		onclick: MouseEventHandler<HTMLButtonElement> | null | undefined;
 		documentIcon: string;
 	}
 
-	const { name, image, onclick, documentIcon }: Props = $props();
+	const { id, name, image, onclick, documentIcon }: Props = $props();
+
+	const selectedId = getSelected().id;
 
 	const anchorName = newAnchorName();
 	const { fleetingAnchorEvents, fleetingTarget } = newFleetingPopover();
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="part-item" style:--anchor-name={anchorName} {...fleetingAnchorEvents} tabindex="-1">
+<div
+	class={{
+		'part-item': true,
+		selected: id === selectedId,
+		...dragClasses(id)
+	}}
+	draggable="true"
+	style:--anchor-name={anchorName}
+	{...fleetingAnchorEvents}
+	tabindex="-1"
+	{...dragEventHandlers(dragType.PART, id)}
+>
 	<div id="name-popover" popover="hint" {@attach fleetingTarget}>
 		<span>{name}</span>
 	</div>
@@ -35,6 +51,7 @@
 	.part-item {
 		height: 58px;
 		aspect-ratio: 1;
+		flex-shrink: 0;
 
 		border-radius: 4px;
 		overflow: hidden;
@@ -47,6 +64,9 @@
 	}
 	.part-item:focus-within {
 		outline: 2px var(--contrast) solid;
+	}
+	.part-item.hovered {
+		anchor-name: --hovered-part;
 	}
 
 	.thumbnail {

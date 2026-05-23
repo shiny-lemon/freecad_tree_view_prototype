@@ -6,22 +6,11 @@ export interface Entry {
 
 	// State
 	showChildren: boolean;
-	issues: Issue[];
+	issues: EntryIssueType[];
+	coordinates: EntryCoordinates | null
 }
 
 export type EntryId = string;
-
-const issueLevel = {
-	LOW: 0,
-	MEDIUM: 1,
-	HIGH: 2,
-}
-type IssueLevel = typeof issueLevel[keyof typeof issueLevel]
-
-interface Issue {
-	level: IssueLevel,
-	message: string,
-}
 
 export const createEntry = (type: EntryType, name: string, allowChildren = false): Entry => {
 	return {
@@ -32,84 +21,17 @@ export const createEntry = (type: EntryType, name: string, allowChildren = false
 
 		showChildren: false,
 		issues: [],
+		coordinates: null,
 	}
+}
+
+export interface EntryCoordinates {
+	top: number;
+	bottom: number;
 }
 
 export const filter = (entries: Entry[], predicate: (entry: Entry) => boolean): Entry[] => {
 	return entries.filter(predicate);
-}
-
-export const positionRelation = {
-	BEFORE: "before",
-	AFTER: "after",
-} as const;
-export type PositionRelation = typeof positionRelation[keyof typeof positionRelation]
-
-export interface Position {
-	id: EntryId | null;
-	relation: PositionRelation;
-	in: boolean;
-}
-
-export const insert = (entries: Entry[],
-	entry: Entry,
-	at: Position = { id: null, relation: positionRelation.AFTER, in: false }
-): Entry[] => {
-
-	if (at.in && at.id === null) throw new Error("Cannot insert into entry when no id is specified.")
-
-	if (entries.length === 0) return [entry]
-
-	return traverse(entries, (previous, current) => {
-		const insertNextTo = !at.in && current.id === at.id
-		if (at.relation === positionRelation.BEFORE && insertNextTo) return [...previous, entry, current];
-		if (at.relation === positionRelation.AFTER && insertNextTo || at.id === null) return [...previous, current, entry];
-
-		if (at.in && current.id === at.id) {
-			const inPosition = { in: false, id: null, relation: at.relation }
-			current.children = insert(current.children || [], entry, inPosition);
-		}
-
-		return [...previous, current]
-	})
-}
-
-const find = (entries: Entry[], id: EntryId): Entry => {
-	const result = flatten(entries).find((entry) => entry.id === id)
-	if (result === undefined) throw new Error(`Could not find entry with id ${id}`);
-	return result;
-}
-
-const remove = (entries: Entry[], id: EntryId): Entry[] => {
-	return traverse(entries, (previous, current) => {
-		if (current.id === id) return previous
-
-		if (current.children !== null) {
-			current.children = remove(current.children, id)
-		}
-
-		return [...previous, current]
-	})
-}
-
-export const move = (entries: Entry[], id: EntryId, to: Position) => {
-	const entry = find(entries, id)
-	const remainingEntries = remove(entries, id);
-
-	return insert(remainingEntries, entry, to);
-}
-
-export const traverse = (entries: Entry[], callbackfn: (previousValue: Entry[], currentValue: Entry, currentIndex: number, array: Entry[]) => Entry[]): Entry[] => {
-	return entries.reduce<Entry[]>((previousValue, currentValue, currentIndex, array) => {
-		return callbackfn(previousValue, currentValue, currentIndex, array)
-	}, [])
-}
-
-export const flatten = (entries: Entry[]): Entry[] => {
-	return traverse(entries, (previous, current) => {
-		const currentEntries = flatten(current.children || []);
-		return [...previous, current, ...currentEntries];
-	})
 }
 
 // Enums
@@ -121,6 +43,7 @@ export const entryType = {
 
 	LINEAR: 'linear',
 	POLAR: 'polar',
+	MIRROR: "mirror",
 
 	FILLET: 'fillet',
 	CHAMFER: 'chamfer',
@@ -156,6 +79,7 @@ export const entryTypeIcon = {
 
 	[entryType.LINEAR]: toolPath + "part-design/linear-pattern",
 	[entryType.POLAR]: toolPath + "part-design/polar-pattern",
+	[entryType.MIRROR]: toolPath + "part-design/mirrored",
 
 	[entryType.FILLET]: toolPath + "part-design/fillet",
 	[entryType.CHAMFER]: toolPath + "part-design/chamfer",
@@ -182,6 +106,29 @@ export const entryTypeIcon = {
 
 } as const satisfies Record<EntryType, string>
 
+export const entryIssueType = {
+	ERROR: "error",
+	NOT_FULLY_CONSTRAINED: "not-fully-constrained",
+	RECOMPUTE: "recompute",
+	UNATTATCHED: "unattatched"
+} as const
+export type EntryIssueType = typeof entryIssueType[keyof typeof entryIssueType]
+
+const issuePath = "src/lib/assets/issues/" as const;
+export const entryIssueIcon = {
+	[entryIssueType.ERROR]: issuePath + "error",
+	[entryIssueType.NOT_FULLY_CONSTRAINED]: issuePath + "notfullyconstrained",
+	[entryIssueType.RECOMPUTE]: issuePath + "recompute",
+	[entryIssueType.UNATTATCHED]: issuePath + "unattatched"
+} as const satisfies Record<EntryIssueType, string>
+
+export const entryIssueMessage = {
+	[entryIssueType.ERROR]: "Something is wrong with this feature",
+	[entryIssueType.NOT_FULLY_CONSTRAINED]: "Sketch is not fully constrained",
+	[entryIssueType.RECOMPUTE]: "Feature needs to be recomputed",
+	[entryIssueType.UNATTATCHED]: "Sketch is unattatched"
+} as const satisfies Record<EntryIssueType, string>
+
 export const entryCategory = {
 	SKETCH: "sketch",
 	MODELLING: "modelling",
@@ -203,6 +150,7 @@ export const entryTypeCategory: Record<EntryType, EntryCategory> = {
 
 	[entryType.LINEAR]: entryCategory.PATTERN,
 	[entryType.POLAR]: entryCategory.PATTERN,
+	[entryType.MIRROR]: entryCategory.PATTERN,
 
 	[entryType.FILLET]: entryCategory.DRESS_UP,
 	[entryType.CHAMFER]: entryCategory.DRESS_UP,
@@ -267,7 +215,7 @@ export const entryFilterFunction: Record<EntryFilter, FilterFunction> = {
 	[entryFilter.JOINT_BASIC]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_BASIC,
 	[entryFilter.JOINT_FACE]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_FACE,
 	[entryFilter.JOINT_ADVANCED]: ({ type }) => entryTypeCategory[type] === entryCategory.JOINT_ADVANCED,
-	[entryFilter.BODY]: ({ type }) => entryTypeCategory[type] === entryCategory.DRESS_UP,
+	[entryFilter.BODY]: ({ type }) => entryTypeCategory[type] === entryCategory.BODY,
 
 	[entryFilter.ISSUE]: ({ issues }) => issues.length > 0,
 } as const
