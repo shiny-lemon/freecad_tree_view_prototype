@@ -70,39 +70,38 @@ export const entryType = {
 } as const;
 export type EntryType = typeof entryType[keyof typeof entryType]
 
-const toolPath = "src/lib/assets/tools/" as const;
 export const entryTypeIcon = {
-	[entryType.SKETCH]: toolPath + "part-design/new-sketch",
+	[entryType.SKETCH]: "new-sketch",
 
-	[entryType.PAD]: toolPath + "part-design/pad",
-	[entryType.POCKET]: toolPath + "part-design/pocket",
+	[entryType.PAD]: "pad",
+	[entryType.POCKET]: "pocket",
 
-	[entryType.LINEAR]: toolPath + "part-design/linear-pattern",
-	[entryType.POLAR]: toolPath + "part-design/polar-pattern",
-	[entryType.MIRROR]: toolPath + "part-design/mirrored",
+	[entryType.LINEAR]: "linear-pattern",
+	[entryType.POLAR]: "polar-pattern",
+	[entryType.MIRROR]: "mirrored",
 
-	[entryType.FILLET]: toolPath + "part-design/fillet",
-	[entryType.CHAMFER]: toolPath + "part-design/chamfer",
+	[entryType.FILLET]: "fillet",
+	[entryType.CHAMFER]: "chamfer",
 
-	[entryType.FIXED]: toolPath + "assembly/fixed-joint",
-	[entryType.REVOLUTE]: toolPath + "assembly/revolute-joint",
-	[entryType.CYLINDRICAL]: toolPath + "assembly/cylindrical-joint",
-	[entryType.SLIDER]: toolPath + "assembly/slider-joint",
-	[entryType.BALL]: toolPath + "assembly/ball-joint",
+	[entryType.FIXED]: "fixed-joint",
+	[entryType.REVOLUTE]: "revolute-joint",
+	[entryType.CYLINDRICAL]: "cylindrical-joint",
+	[entryType.SLIDER]: "slider-joint",
+	[entryType.BALL]: "ball-joint",
 
-	[entryType.DISTANCE]: toolPath + "assembly/distance-joint",
-	[entryType.PARALLEL]: toolPath + "assembly/parallel-joint",
-	[entryType.PERPENDICULAR]: toolPath + "assembly/perpendicular-joint",
-	[entryType.ANGLE]: toolPath + "assembly/angle-joint",
+	[entryType.DISTANCE]: "distance-joint",
+	[entryType.PARALLEL]: "parallel-joint",
+	[entryType.PERPENDICULAR]: "perpendicular-joint",
+	[entryType.ANGLE]: "angle-joint",
 
-	[entryType.RACK_AND_PINION]: toolPath + "assembly/rack-pinion-joint",
-	[entryType.SCREW]: toolPath + "assembly/screw-joint",
-	[entryType.GEARS]: toolPath + "assembly/gears-joint",
-	[entryType.BELT]: toolPath + "assembly/belt-joint",
+	[entryType.RACK_AND_PINION]: "rack-pinion-joint",
+	[entryType.SCREW]: "screw-joint",
+	[entryType.GEARS]: "gears-joint",
+	[entryType.BELT]: "belt-joint",
 
-	[entryType.BODY]: toolPath + "part-design/body",
+	[entryType.BODY]: "body",
 
-	[entryType.FOLDER]: toolPath + "std/group",
+	[entryType.FOLDER]: "group",
 
 } as const satisfies Record<EntryType, string>
 
@@ -114,12 +113,11 @@ export const entryIssueType = {
 } as const
 export type EntryIssueType = typeof entryIssueType[keyof typeof entryIssueType]
 
-const issuePath = "src/lib/assets/issues/" as const;
 export const entryIssueIcon = {
-	[entryIssueType.ERROR]: issuePath + "error",
-	[entryIssueType.NOT_FULLY_CONSTRAINED]: issuePath + "notfullyconstrained",
-	[entryIssueType.RECOMPUTE]: issuePath + "recompute",
-	[entryIssueType.UNATTATCHED]: issuePath + "unattatched"
+	[entryIssueType.ERROR]: "error",
+	[entryIssueType.NOT_FULLY_CONSTRAINED]: "notfullyconstrained",
+	[entryIssueType.RECOMPUTE]: "recompute",
+	[entryIssueType.UNATTATCHED]: "unattatched"
 } as const satisfies Record<EntryIssueType, string>
 
 export const entryIssueMessage = {

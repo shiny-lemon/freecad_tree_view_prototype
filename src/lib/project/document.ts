@@ -155,14 +155,13 @@ export const documentTypeWorkbenches: Record<DocumentType, string[]> = {
 	[documentType.VAR_SET]: []
 } as const;
 
-const workbenchPath = "src/lib/assets/tools/workbench/" as const;
 export const documentTypeIcon = {
-	[documentType.PART]: workbenchPath + "part-design",
-	[documentType.ASSEMBLY]: workbenchPath + "assembly",
-	[documentType.BIM]: workbenchPath + "bim",
-	[documentType.CAM]: workbenchPath + "cam",
-	[documentType.TECH_DRAW]: workbenchPath + "tech-draw",
-	[documentType.VAR_SET]: workbenchPath + "var-set",
+	[documentType.PART]: "part-design",
+	[documentType.ASSEMBLY]: "assembly",
+	[documentType.BIM]: "bim",
+	[documentType.CAM]: "cam",
+	[documentType.TECH_DRAW]: "tech-draw",
+	[documentType.VAR_SET]: "var-set",
 
 } as const satisfies Record<DocumentType, string>
 

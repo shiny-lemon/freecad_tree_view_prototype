@@ -10,13 +10,13 @@
 	} from '$lib/project/document';
 	import Tree from '$lib/tree/Tree.svelte';
 	import { fly } from 'svelte/transition';
-	import Workbenches from '../lib/Workbenches.svelte';
+	import Workbenches from '$lib/Workbenches.svelte';
 	import { entryTypeIcon } from '$lib/project/entry';
 
 	// Std
-	import coordinateSystem from '$lib/assets/tools/std/coordinate-system.svg';
-	import group from '$lib/assets/tools/std/group.svg';
-	import linkMake from '$lib/assets/tools/std/link-make.svg';
+	import coordinateSystem from '$lib/assets/tools/coordinate-system.svg';
+	import group from '$lib/assets/tools/group.svg';
+	import linkMake from '$lib/assets/tools/link-make.svg';
 
 	const selectedDocumentType = $derived(getSelected().type);
 </script>
@@ -43,7 +43,9 @@
 			</div>
 			<div class="workbench">
 				{#each documentTools(selectedDocumentType) as tool}
-					<button class="icon"> <img src={entryTypeIcon[tool] + '.svg'} alt="" /></button>
+					{#await import(`$lib/assets/tools/${entryTypeIcon[tool]}.svg`) then { default: src }}
+						<button class="icon"> <img {src} alt="" /></button>
+					{/await}
 				{/each}
 			</div>
 		</div>

@@ -60,7 +60,9 @@
 				{#each Object.values(documentType) as type}
 					<li>
 						<button class="part-option" onclick={() => onnewdocument(type)}>
-							<img src={documentTypeIcon[type] + '.svg'} alt="" />
+							{#await import(`$lib/assets/workbench/${documentTypeIcon[type]}.svg`) then { default: src }}
+								<img {src} alt="" />
+							{/await}
 							{documentTypeDisplayName[type]}
 						</button>
 					</li>

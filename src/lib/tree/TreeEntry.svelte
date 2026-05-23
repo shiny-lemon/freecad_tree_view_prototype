@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, ChevronRight, CircleAlert } from '@lucide/svelte';
+	import { ChevronDown, ChevronRight } from '@lucide/svelte';
 	import TreeEntry from './TreeEntry.svelte';
 	import IconToggle from '$lib/IconToggle.svelte';
 	import type { KeyboardEventHandler, MouseEventHandler } from 'svelte/elements';
@@ -92,7 +92,10 @@
 					/>
 				{/if}
 			</div>
-			<img class="tool-icon" src={entryTypeIcon[entry.type] + '.svg'} alt="" />
+
+			{#await import(`$lib/assets/tools/${entryTypeIcon[entry.type]}.svg`) then { default: src }}
+				<img class="tool-icon" {src} alt="" />
+			{/await}
 
 			<span
 				class="name-input"
@@ -116,7 +119,9 @@
 						{...fleetingAnchorEvents}
 					>
 						<!-- <CircleAlert color="var(--alert-0)" /> -->
-						<img class="issue-icon" src={entryIssueIcon[issueType] + '.png'} alt="" />
+						{#await import(`$lib/assets/issues/${entryIssueIcon[issueType]}.png`) then { default: src }}
+							<img class="issue-icon" {src} alt="" />
+						{/await}
 
 						<div id="issue-popover" popover="hint" {@attach fleetingTarget}>
 							{entryIssueMessage[issueType]}
