@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base, resolve } from '$app/paths';
 	import { selectDocument, getDocuments } from '$lib/data/data.svelte';
 	import type { Document } from '$lib/project/document';
 
@@ -12,7 +13,7 @@
 <ul>
 	{#each documents as document}
 		<li>
-			<a href="/" class="wrapper" onclick={() => selectDocument(document.id)}>
+			<a href={resolve('/')} class="wrapper" onclick={() => selectDocument(document.id)}>
 				<div class="content">
 					{#await import(`$lib/assets/thumbnails/${document.thumbnail}.png`)}
 						<div class="document-image"></div>
