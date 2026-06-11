@@ -1,7 +1,6 @@
 import { type Document, type DocumentId } from './document';
-import { type Range } from "./"
+import { flatten, type Range } from "./"
 import { type Entry, type EntryId } from './entry';
-import { flatten } from './drag';
 
 export interface Project {
 	name: string;
@@ -10,6 +9,8 @@ export interface Project {
 	// State
 	selectedId: string | null;
 	focus: Range<DocumentId> | null;
+	history: DocumentId[];
+	documentSearchValue: string;
 }
 
 export const newProject = (name: string): Project => {
@@ -19,6 +20,8 @@ export const newProject = (name: string): Project => {
 
 		selectedId: null,
 		focus: null,
+		history: [],
+		documentSearchValue: "",
 	};
 	return project;
 };
@@ -29,9 +32,8 @@ export const overwriteDocument = (project: Project, id: string, newValue: Docume
 	project.documents[foundDocumentIndex] = newValue;
 }
 
-export const getSelectedId = (project: Project): DocumentId => {
+export const getSelectedId = (project: Project): DocumentId | null => {
 	const id = project.selectedId;
-	if (id === null) throw new Error("No document selected");
 	return id;
 }
 

@@ -14,15 +14,11 @@
 	} from '../project/entry';
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
-	import {
-		getSelected,
-		setEntryCoordinates,
-		setShowChildren,
-		updateDocumentFocus
-	} from '$lib/data/data.svelte';
+	import { setEntryCoordinates, setShowChildren, updateDocumentFocus } from '$lib/data/data.svelte';
 	import { dragClasses, dragEventHandlers, dragType } from '$lib/project/drag';
 	import { isSpaceAfterEntryInFiltered } from '$lib/project/document';
 	import type { Attachment } from 'svelte/attachments';
+	import { getSelectedDocumentContext } from '$lib/project/context';
 
 	interface Props {
 		entry: Entry;
@@ -30,6 +26,8 @@
 	}
 
 	let { entry, selected }: Props = $props();
+
+	const selectedDocument = getSelectedDocumentContext()();
 
 	const onselectactionmouse: MouseEventHandler<HTMLElement> = (event) => {
 		if (nameEditable) return;
@@ -67,7 +65,7 @@
 		class={{
 			node: true,
 			selected,
-			'space-after': isSpaceAfterEntryInFiltered(getSelected(), entry.id),
+			'space-after': isSpaceAfterEntryInFiltered(selectedDocument, entry.id),
 			...dragClasses(entry.id)
 		}}
 		draggable={!nameEditable}

@@ -1,148 +1,130 @@
 <script lang="ts">
-	import { getDocuments, getSelected } from '$lib/data/data.svelte';
 	import Editor from '$lib/editor/Editor.svelte';
-	import PartList from '$lib/parts/PartList.svelte';
 	import {
-		documentTypeDisplayName,
-		documentTypeWorkbenches,
-		documentTools,
-		getFocusedEntries
+		blurDocumentSelection,
+		getDocument,
+		getDocuments,
+		getDocumentSearchValue,
+		getHistory,
+		getSelected,
+		setDocumentSearchValue
+	} from '$lib/data/data.svelte';
+	import {
+		getFocusedEntries,
+		type FilterIssue,
+		filterIssue,
+		applyFilter
 	} from '$lib/project/document';
 	import Tree from '$lib/tree/Tree.svelte';
-	import { fly } from 'svelte/transition';
-	import Workbenches from '$lib/Workbenches.svelte';
-	import { entryTypeIcon } from '$lib/project/entry';
+	import { LayoutGrid, LayoutList, List, Search } from '@lucide/svelte';
+	import TreeDocuments from '$lib/tree/TreeDocuments.svelte';
+	import TreeRoot from '$lib/tree/TreeRoot.svelte';
 
-	// Std
-	import coordinateSystem from '$lib/assets/tools/coordinate-system.svg';
-	import group from '$lib/assets/tools/group.svg';
-	import linkMake from '$lib/assets/tools/link-make.svg';
+	const selected = $derived(getSelected());
 
-	const selectedDocumentType = $derived(getSelected().type);
+	const searchedDocuments = $derived(
+		getDocuments().filter((value) =>
+			value.name.toLowerCase().includes(getDocumentSearchValue().toLowerCase())
+		)
+	);
+
+	const createFilters = (isSelected: boolean) => {
+		if (isSelected) return;
+	};
+	const filters = $derived(createFilters(selected !== null));
 </script>
 
-<div class="app">
-	<header>
-		<div class="workbenches-container">
-			{#if selectedDocumentType}
-				{#key selectedDocumentType}
-					<div class="workbenches" transition:fly={{ y: 48 }}>
-						<h2 class="document-type">
-							{documentTypeDisplayName[selectedDocumentType]}
-						</h2>
-						<Workbenches names={documentTypeWorkbenches[selectedDocumentType]} />
-					</div>
-				{/key}
+{#snippet topLeft()}
+	{#if selected}
+		<button class="icon" onclick={() => blurDocumentSelection()}>
+			<!-- <ArrowLeft /> -->
+			<!-- <ArrowLeftToLine /> -->
+		</button>
+
+		<h1>
+			{selected.name}
+		</h1>
+	{:else}
+		<label class="search-label">
+			<Search />
+			<input
+				type="search"
+				name="searchbar"
+				id="searchbar"
+				placeholder="search documents"
+				bind:value={getDocumentSearchValue, setDocumentSearchValue}
+			/>
+		</label>
+	{/if}
+{/snippet}
+
+{#snippet content()}
+	{#if selected}
+		{#snippet fallback(issue: FilterIssue | null)}
+			{#if issue === filterIssue.NO_ENTRIES}
+				<div>Nothing to see here...</div>
+
+				<small>Click something in the toolbar to start.</small>
+			{:else if issue === filterIssue.NO_ENTRIES_IN_FILTER}
+				<div>Filter shows nothing.</div>
+
+				<small>Choose a different filter above.</small>
 			{/if}
-		</div>
-		<div class="toolbar">
-			<div class="std">
-				<button class="icon"> <img src={coordinateSystem} alt="" /></button>
-				<button class="icon"> <img src={group} alt="" /></button>
-				<button class="icon"> <img src={linkMake} alt="" /></button>
-			</div>
-			<div class="workbench">
-				{#each documentTools(selectedDocumentType) as tool}
-					{#await import(`$lib/assets/tools/${entryTypeIcon[tool]}.svg`) then { default: src }}
-						<button class="icon"> <img {src} alt="" /></button>
-					{/await}
-				{/each}
-			</div>
-		</div>
-	</header>
-	<main>
-		<div class="pane">
-			<PartList items={getDocuments()} />
-			<Tree entries={getSelected().entries} selectedDocument={getSelected()} />
-		</div>
-		<Editor positionAnchor="--main-pane" selectedEntries={getFocusedEntries(getSelected())} />
-		<div class="view">
-			<span class="info"
-				>FreeCAD Tree View Prototype • <a
-					href="https://github.com/shiny-lemon/freecad_tree_view_prototype"
-					target="_blank">Read More on GitHub</a
-				></span
-			>
-		</div>
-	</main>
+		{/snippet}
+
+		<TreeRoot entries={applyFilter(selected)} {fallback} />
+	{:else}
+		<TreeDocuments documents={searchedDocuments} />
+	{/if}
+{/snippet}
+
+{#snippet bottom()}
+	<div class="list-options">
+		<span class="info">43 documents</span>
+
+		<span class="toggle">
+			<List />
+			<LayoutList />
+			<LayoutGrid />
+		</span>
+	</div>
+{/snippet}
+
+<div class="app">
+	<div class="pane">
+		<Tree {topLeft} {content} {bottom} filters={[{ id: 'string', name: 'Strign' }]} />
+	</div>
+	{#if selected}
+		<Editor positionAnchor="--main-pane" selectedEntries={getFocusedEntries(selected)} />
+	{/if}
 </div>
 
 <style>
 	.app {
-		height: 100vh;
-		width: 100vw;
-
 		display: flex;
 		flex-direction: column;
 	}
 
-	header {
-		width: 100vw;
-
-		font-size: 0.6875rem;
-
-		border-bottom: 2px solid var(--subtext-1);
-	}
-
-	.document-type {
-		font-size: 1.5rem;
-	}
-
-	.workbenches {
-		height: 48px;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.workbenches-container {
-		display: grid;
-		padding: 0.25rem 0.5rem;
-		overflow: hidden;
-	}
-	.workbenches {
-		grid-column: 1;
-		grid-row: 1;
-	}
-
-	main {
+	.pane {
 		flex: 1;
-		width: 100vw;
+		height: 100%;
+		width: 18.75rem;
+
 		display: flex;
 
-		overflow-y: hidden;
+		anchor-name: --main-pane;
 
-		.pane {
-			width: 24rem;
-			max-height: 100vh;
-
-			display: flex;
-
-			anchor-name: --main-pane;
-
-			border-right: 2px solid var(--subtext-0);
-		}
-
-		.view {
-			flex: 1;
-			overflow: hidden;
-		}
+		border-right: 2px solid var(--subtext-0);
 	}
 
-	.view > .info {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		margin: 0.5rem;
+	h1 {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		width: 100%;
 	}
 
-	.toolbar {
+	.search-label {
 		display: flex;
-		gap: 1rem;
-
-		margin: 0.75rem 1.5rem;
-	}
-	.toolbar .icon > img {
-		height: 2rem;
+		gap: 0.25rem;
 	}
 </style>

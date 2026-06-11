@@ -3,7 +3,6 @@
 	import { newAnchorName } from '$lib/popover';
 	import { newFleetingPopover } from '$lib/popover/fleeting.svelte';
 	import type { DocumentId } from '$lib/project/document';
-	import { dragClasses, dragEventHandlers, dragType } from '$lib/project/drag';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	interface Props {
@@ -16,7 +15,10 @@
 
 	const { id, name, image, onclick, documentIcon }: Props = $props();
 
-	const selectedId = getSelected().id;
+	const isSelected = (id: DocumentId) => {
+		const selected = getSelected();
+		return selected !== null && id === selected.id;
+	};
 
 	const anchorName = newAnchorName();
 	const { fleetingAnchorEvents, fleetingTarget } = newFleetingPopover();
@@ -25,14 +27,12 @@
 <div
 	class={{
 		'part-item': true,
-		selected: id === selectedId,
-		...dragClasses(id)
+		selected: isSelected(id)
 	}}
 	draggable="true"
 	style:--anchor-name={anchorName}
 	{...fleetingAnchorEvents}
 	tabindex="-1"
-	{...dragEventHandlers(dragType.PART, id)}
 >
 	<div id="name-popover" popover="hint" {@attach fleetingTarget}>
 		<span>{name}</span>
@@ -40,7 +40,9 @@
 
 	<button class="icon" {onclick}>
 		{#if image != null}
-			<img class="thumbnail" src={image} alt="" />
+			{#await import(`$lib/assets/thumbnails/${image}.png`) then { default: src }}
+				<img class="thumbnail" {src} alt="" />
+			{/await}
 		{:else}
 			<img class="thumbnail fallback" src={documentIcon} alt="" />
 		{/if}

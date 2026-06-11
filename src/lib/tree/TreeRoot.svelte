@@ -3,18 +3,20 @@
 	import TreeEntry from './TreeEntry.svelte';
 	import type { Snippet } from 'svelte';
 	import { newAnchorName } from '$lib/popover';
-	import { isEntrySelected, type Document } from '$lib/project/document';
+	import { filterIssue, isEntrySelected, type FilterIssue } from '$lib/project/document';
 	import { dataDragPosition, draggerIndicatorActive, dragType } from '$lib/project/drag';
 	import type { MouseEventHandler } from 'svelte/elements';
 	import { setTipAnchor } from '$lib/data/data.svelte';
+	import { getSelectedDocumentContext } from '$lib/project/context';
 
 	interface Props {
 		entries: Entry[];
-		selectedDocument: Document;
-		fallback: Snippet;
+		fallback: Snippet<[FilterIssue | null]>;
 	}
 
-	const { entries, fallback, selectedDocument }: Props = $props();
+	const { entries, fallback }: Props = $props();
+
+	const selectedDocument = getSelectedDocumentContext()();
 
 	$effect(() => {
 		const tipAnchorInEntries = entries.some((entry) => entry.id === selectedDocument.tipAnchor);
@@ -74,6 +76,12 @@
 
 		setTipAnchor(closestEntry.id);
 	};
+
+	const filterIssueState = (entries: Entry[], shown: Entry[]): FilterIssue | null => {
+		if (shown.length === 0 && entries.length > 0) return filterIssue.NO_ENTRIES_IN_FILTER;
+		if (entries.length === 0) return filterIssue.NO_ENTRIES;
+		return null;
+	};
 </script>
 
 <svelte:window
@@ -105,7 +113,7 @@
 {/if}
 
 <ul class="nodes" role="tree" tabindex="-1">
-	{@render fallback()}
+	{@render fallback(filterIssueState(selectedDocument.entries, entries))}
 
 	{#each entries as entry, index (entry.id)}
 		<TreeEntry entry={entries[index]} selected={isEntrySelected(entry.id, selectedDocument)} />
@@ -116,8 +124,6 @@
 	.nodes {
 		flex: 1;
 		padding: 0.25rem 1rem;
-
-		overflow-y: scroll;
 	}
 
 	.dragger-indicator {
@@ -183,5 +189,6 @@
 		height: 4px;
 		width: 16px;
 		background-color: var(--subtext-0);
+		user-select: none;
 	}
 </style>

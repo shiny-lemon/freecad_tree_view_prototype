@@ -1,87 +1,60 @@
 <script lang="ts">
-	import { ListFilter, Pin, PinOff } from '@lucide/svelte';
-	import {
-		entryFilter,
-		entryFilterDisplayName,
-		entryFilterFunction,
-		type Entry,
-		type EntryFilter
-	} from '$lib/project/entry';
-	import IconToggle from '$lib/IconToggle.svelte';
-	import { applyFilter, documentTypeEntryFilter, type Document } from '$lib/project/document';
-	import TreeRoot from './TreeRoot.svelte';
-	import { setFilterFunction, setPinned } from '$lib/data/data.svelte';
+	import { ListFilter } from '@lucide/svelte';
+	import type { Snippet } from 'svelte';
 	import type { FormEventHandler } from 'svelte/elements';
 
 	interface Props {
-		entries: Entry[];
-		selectedDocument: Document;
+		topLeft: Snippet;
+		content: Snippet<[string]>;
+		bottom: Snippet;
+		filters: { id: string; name: string }[];
 	}
 
-	let { entries, selectedDocument }: Props = $props();
+	const { topLeft, content, filters }: Props = $props();
 
-	const shownEntries = $derived(applyFilter(selectedDocument));
+	let filterValue = $state() as string;
 
 	const onfilterchange: FormEventHandler<HTMLFormElement> = (event) => {
-		const filter = (event.target as HTMLInputElement)?.value as EntryFilter;
-		setFilterFunction(selectedDocument.id, entryFilterFunction[filter]);
+		const filter = (event.target as HTMLInputElement)?.value as string;
+		filterValue = filter;
 	};
 </script>
 
 <div class="tree">
 	<div class="top">
-		<button class="icon">
-			<IconToggle
-				Checked={Pin}
-				Unchecked={PinOff}
-				size={24}
-				bind:checked={
-					() => selectedDocument.pinned, (value) => setPinned(selectedDocument.id, value)
-				}
-			/>
-		</button>
+		{@render topLeft()}
 
-		<h1>
-			{selectedDocument.name}
-		</h1>
 		<button class="icon" id="filter-anchor" popovertarget="filter-popover">
 			<ListFilter size={20} />
 		</button>
 		<div class="filter-popup overlay" id="filter-popover" popover="auto">
-			<form action="#" onchange={onfilterchange}>
+			<p style="width: 16rem; padding: 1rem; text-wrap: pretty;">
+				Sigh. I managed to break the filter during refactoring. It will be fixed... later.
+			</p>
+			<!-- <form action="#" onchange={onfilterchange}>
 				<fieldset>
 					<legend>Show</legend>
 
-					{#each documentTypeEntryFilter[selectedDocument.type] as category}
+					{#each filters as filter, index}
 						<li>
 							<input
 								type="radio"
-								id={category}
+								id={filter.id}
 								name="filter"
-								value={category}
-								checked={category === entryFilter.ALL}
+								value={filter.id}
+								checked={index === 0}
 							/>
-							<label for={category}>{entryFilterDisplayName[category]}</label>
+							<label for={filter.id}>{filter.name}</label>
 						</li>
 					{/each}
 				</fieldset>
-			</form>
+			</form> -->
 		</div>
 	</div>
 
-	{#snippet fallback()}
-		{#if entries.length === 0}
-			<div>Nothing to see here...</div>
-
-			<small>Click something in the toolbar to start.</small>
-		{:else if shownEntries.length === 0}
-			<div>Filter shows nothing.</div>
-
-			<small>Choose a different filter above.</small>
-		{/if}
-	{/snippet}
-
-	<TreeRoot entries={shownEntries} {fallback} {selectedDocument} />
+	<div class="content">
+		{@render content(filterValue)}
+	</div>
 </div>
 
 <style>
@@ -119,9 +92,8 @@
 		padding: 0.75rem;
 	}
 
-	h1 {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		width: 100%;
+	.content {
+		flex: 1;
+		overflow-y: scroll;
 	}
 </style>

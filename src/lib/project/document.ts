@@ -1,7 +1,7 @@
 import { entryCategory, entryFilter, entryFilterFunction, entryTypeCategory, type Entry, type EntryCategory, type EntryFilter, type EntryId, type EntryType, type FilterFunction, } from './entry.ts';
-import { type Range } from "./"
+import { flatten, type Range } from "./"
 import { getEntry } from './project.ts';
-import { flatten, newDragState, type DragState, type DragType } from './drag.ts';
+import { newDragState, type DragState, type DragType } from './drag.ts';
 
 export interface Document {
 	id: DocumentId;
@@ -13,7 +13,7 @@ export interface Document {
 	// State
 	focus: Range<EntryId> | null,
 	pinned: boolean,
-	filterFunction: FilterFunction,
+	entryFilterType: EntryFilter,
 	drag: DragState
 	tipAnchor: EntryId | null
 }
@@ -29,7 +29,7 @@ export const newDocument = (type: DocumentType, name: string, thumbnail?: string
 		entries: [],
 		focus: null,
 		pinned: false,
-		filterFunction: entryFilterFunction[entryFilter.ALL],
+		entryFilterType: entryFilter.ALL,
 		drag: newDragState(),
 		tipAnchor: null,
 	};
@@ -71,7 +71,7 @@ export const getFocusedEntries = (document: Document): Entry[] => {
 }
 
 export const applyFilter = (document: Document) => {
-	const filterFunction = document.filterFunction;
+	const filterFunction = entryFilterFunction[document.entryFilterType];
 
 	// This only goes one layer down, but for the prototype, this is fine.
 	const topLevelEntries = document.entries.filter((value) => {
@@ -164,6 +164,12 @@ export const documentTypeIcon = {
 	[documentType.VAR_SET]: "var-set",
 
 } as const satisfies Record<DocumentType, string>
+
+export const filterIssue = {
+	NO_ENTRIES: "no-entries",
+	NO_ENTRIES_IN_FILTER: "no-entries-in-filter"
+} as const
+export type FilterIssue = (typeof filterIssue)[keyof typeof filterIssue];
 
 export const documentTypeEntryFilter: Record<DocumentType, EntryFilter[]> = {
 	[documentType.PART]: [entryFilter.ALL, entryFilter.SKETCH, entryFilter.MODELLING, entryFilter.PATTERN, entryFilter.DRESS_UP, entryFilter.ISSUE],

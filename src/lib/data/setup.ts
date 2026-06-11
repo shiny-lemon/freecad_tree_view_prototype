@@ -1,13 +1,13 @@
-import { documentType, newDocument } from "$lib/project/document";
-import { insert, positionRelation } from "$lib/project/drag";
+import { insert, positionRelation } from "$lib/project";
+import { documentType, newDocument, type Document } from "$lib/project/document";
 import { createEntry, entryType, type EntryId, type EntryType } from "$lib/project/entry";
 import { newProject, type Project } from "$lib/project/project";
-import { addDocument } from "./data.svelte";
-
-const thumbnail = async (name: string) =>
-    (await import(`$lib/assets/thumbnails/${name}.png`)).default;
 
 const inParent = (id: string) => { return { id, relation: positionRelation.AFTER, in: true } }
+
+export const addDocument = (document: Document, scope: Document[]) => {
+    scope.push(document);
+}
 
 const createEntryAndSketch = (type: EntryType, entryName: string, sketchName: string) => {
     const firstEntry = insert([], createEntry(type, entryName, true));
@@ -17,12 +17,12 @@ const createEntryAndSketch = (type: EntryType, entryName: string, sketchName: st
         inParent(firstEntry.at(-1)?.id as EntryId))[0]
 }
 
-export const setupProject = async (): Promise<Project> => {
+export const setupProject = (): Project => {
     // Initialization of project
     const initialProject = newProject('Excavator Arm');
 
     // BASE
-    const partBase = newDocument(documentType.PART, 'Base', await thumbnail('Base'));
+    const partBase = newDocument(documentType.PART, 'Base', 'Base');
     partBase.entries = [
         // TODO should probably be a global part mirror instead of this linear pattern stuff
         createEntryAndSketch(entryType.PAD, "Pad Profile", "Sketch Profile"),
@@ -35,7 +35,7 @@ export const setupProject = async (): Promise<Project> => {
     addDocument(partBase, initialProject.documents);
 
     // BOOM
-    const partBoom = newDocument(documentType.PART, 'Boom', await thumbnail('Boom'));
+    const partBoom = newDocument(documentType.PART, 'Boom', 'Boom');
     partBoom.entries = [
         createEntryAndSketch(entryType.PAD, "Pad Profile", "Sketch Profile"),
         createEntryAndSketch(entryType.POCKET, "Pocket Mounting Holes", "Sketch Mounting Holes"),
@@ -45,14 +45,14 @@ export const setupProject = async (): Promise<Project> => {
     addDocument(partBoom, initialProject.documents)
 
     // BASE_PIN
-    const partBasePin = newDocument(documentType.PART, 'BasePin', await thumbnail('BasePin'))
+    const partBasePin = newDocument(documentType.PART, 'BasePin', 'BasePin')
     partBasePin.entries = [
         createEntryAndSketch(entryType.PAD, "Pad Profile", "Sketch Profile"),
     ]
     addDocument(partBasePin, initialProject.documents);
 
     // STICK
-    const partStick = newDocument(documentType.PART, 'Stick', await thumbnail('Stick'))
+    const partStick = newDocument(documentType.PART, 'Stick', 'Stick')
     partStick.entries = [
         createEntryAndSketch(entryType.PAD, "Pad Upper Arm", "Sketch Upper Arm"),
         createEntryAndSketch(entryType.POCKET, "Pocket Mounting Holes", "Sketch Mounting Holes"),
@@ -63,7 +63,7 @@ export const setupProject = async (): Promise<Project> => {
     addDocument(partStick, initialProject.documents);
 
     // BUCKET_LINK_1
-    const partBucketLink1 = newDocument(documentType.PART, 'BucketLink1', await thumbnail('BucketLink1'))
+    const partBucketLink1 = newDocument(documentType.PART, 'BucketLink1', 'BucketLink1')
     partBucketLink1.entries = [
         createEntryAndSketch(entryType.PAD, "Pad Link Bridge", "Sketch Link Bridge"),
         createEntryAndSketch(entryType.PAD, "Pad Mounting Arm", "Sketch Mounting Arm"),
@@ -74,25 +74,25 @@ export const setupProject = async (): Promise<Project> => {
     addDocument(partBucketLink1, initialProject.documents);
 
     // BUCKET_LINK_2
-    const partBucketLink2 = newDocument(documentType.PART, 'BucketLink2', await thumbnail('BucketLink2'))
+    const partBucketLink2 = newDocument(documentType.PART, 'BucketLink2', 'BucketLink2')
     addDocument(partBucketLink2, initialProject.documents);
 
     // BUCKET
-    const partBucket = newDocument(documentType.PART, 'Bucket', await thumbnail('Bucket'))
+    const partBucket = newDocument(documentType.PART, 'Bucket', 'Bucket')
     addDocument(partBucket, initialProject.documents);
 
     // CYLINDERS
-    const partBoomCylinderInner = newDocument(documentType.PART, 'BoomCylinderInner', await thumbnail('Cylinder'))
+    const partBoomCylinderInner = newDocument(documentType.PART, 'BoomCylinderInner', 'Cylinder')
     addDocument(partBoomCylinderInner, initialProject.documents);
 
-    const partStickCylinderInner = newDocument(documentType.PART, 'StickCylinderInner', await thumbnail('Cylinder'))
+    const partStickCylinderInner = newDocument(documentType.PART, 'StickCylinderInner', 'Cylinder')
     addDocument(partStickCylinderInner, initialProject.documents);
 
-    const partBucketCylinderInner = newDocument(documentType.PART, 'BucketCylinderInner', await thumbnail('Cylinder'))
+    const partBucketCylinderInner = newDocument(documentType.PART, 'BucketCylinderInner', 'Cylinder')
     addDocument(partBucketCylinderInner, initialProject.documents);
 
     // ASSEMBLY
-    const assemblyDocument = newDocument(documentType.ASSEMBLY, 'Assembly', await thumbnail('Assembly'));
+    const assemblyDocument = newDocument(documentType.ASSEMBLY, 'Assembly', 'Assembly');
     assemblyDocument.entries = [
         createEntry(entryType.BODY, partBase.name),
         createEntry(entryType.FIXED, "Fixed Base"), // Need a ground joint
